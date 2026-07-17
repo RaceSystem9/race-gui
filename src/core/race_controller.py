@@ -23,7 +23,10 @@ class RaceController(QObject):
         self.websocket_client = WebSocketClient()
         self.websocket_client.connect()
 
-        default_config = Path(__file__).resolve().parents[1] / "config" / "teams.json"
+        config_dir = Path(__file__).resolve().parents[1] / "config"
+        default_config = config_dir / "team_info.json"
+        if not default_config.exists():
+            default_config = config_dir / "teams.json"
         self.config_path = config_path or default_config
         self.teams: List[Dict[str, Any]] = self._load_teams()
         self.team_index = 0
@@ -43,7 +46,36 @@ class RaceController(QObject):
     def _load_teams(self) -> List[Dict[str, Any]]:
         with self.config_path.open("r", encoding="utf-8") as handle:
             data = json.load(handle)
-        return data.get("teams", [])
+
+        if isinstance(data, dict):
+            raw_teams = data.get("teams", [])
+        elif isinstance(data, list):
+            raw_teams = data
+        else:
+            raw_teams = []
+
+        return [self._normalize_team(team) for team in raw_teams if isinstance(team, dict)]
+
+    def _normalize_team(self, team: Dict[str, Any]) -> Dict[str, Any]:
+        # Support both legacy teams.json and team_info.json fields.
+        number = team.get("number", team.get("team_no", 0))
+        driver = team.get("driver")
+        if not driver:
+            members = team.get("members", [])
+            if isinstance(members, list) and members:
+                first_member = members[0]
+                if isinstance(first_member, dict):
+                    driver = first_member.get("name")
+
+        return {
+            "number": number,
+            "team_name": team.get("team_name", "N/A"),
+            "school": team.get("school", "N/A"),
+            "driver": driver or "N/A",
+            "car_name": team.get("car_name", "N/A"),
+            "num_of_members": team.get("num_of_members", 0),
+            "members": team.get("members", []),
+        }
 
     def _assign_teams(self) -> None:
         if not self.teams:

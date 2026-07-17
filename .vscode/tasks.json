@@ -1,0 +1,70 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Qt: Open Designer",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\pyside6-designer.exe",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Qt: Edit MainWindow UI",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\pyside6-designer.exe",
+      "args": [
+        "src\\gui\\ui\\main_window.ui"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Qt: Edit Broadcast UI",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\pyside6-designer.exe",
+      "args": [
+        "src\\gui\\ui\\broadcast_window.ui"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Qt: Generate Python from UI files",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "$ErrorActionPreference='Stop'; $in='src/gui/ui'; $out='src/gui/generated'; if (!(Test-Path $out)) { New-Item -ItemType Directory -Path $out | Out-Null }; Get-ChildItem $in -Filter *.ui | ForEach-Object { $target = Join-Path $out ('ui_' + $_.BaseName + '.py'); .\\.venv\\Scripts\\pyside6-uic.exe $_.FullName -o $target; Write-Host ('Generated: ' + $target) }"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

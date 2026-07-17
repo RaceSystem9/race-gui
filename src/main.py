@@ -18,8 +18,12 @@ def build_app(headless: bool = False):
     app.setOrganizationName("RaceManager")
 
     config_dir = Path(__file__).resolve().parent / "config"
+    team_config_path = config_dir / "team_info.json"
+    if not team_config_path.exists():
+        team_config_path = config_dir / "teams.json"
+
     db_manager = SQLiteManager(config_dir / "race_control.db")
-    controller = RaceController(config_path=config_dir / "teams.json", database=db_manager)
+    controller = RaceController(config_path=team_config_path, database=db_manager)
 
     operator_window = MainWindow(controller)
     broadcast_window = BroadcastWindow(controller)

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QLabel, QMainWindow, QVBoxLayout, QWidget
+from PySide6.QtCore import QFile, QIODevice, QTimer
+from PySide6.QtUiTools import QUiLoader
+from PySide6.QtWidgets import QLabel, QMainWindow, QWidget
 
 from ..core.race_controller import RaceController
 from ..core.race_state import RaceState
@@ -14,10 +15,7 @@ class BroadcastWindow(QMainWindow):
     def __init__(self, controller: RaceController, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.controller = controller
-        self.setWindowTitle("Race Control Broadcast")
-        self.resize(1920, 1080)
-        self.setStyleSheet("background: #0e1726; color: #f6f6f6;")
-        self._build_ui()
+        self._load_ui()
 
         self._clock_timer = QTimer(self)
         self._clock_timer.setInterval(1000)
@@ -27,41 +25,42 @@ class BroadcastWindow(QMainWindow):
         self.controller.state_changed.connect(self.refresh_from_state)
         self.refresh_from_state(self.controller.state)
 
-    def _build_ui(self) -> None:
-        central = QWidget(self)
-        self.setCentralWidget(central)
-        layout = QVBoxLayout(central)
+    def _load_ui(self) -> None:
+        ui_path = Path(__file__).resolve().parent / "ui" / "broadcast_window.ui"
+        loader = QUiLoader()
+        ui_file = QFile(str(ui_path))
+        if not ui_file.open(QIODevice.OpenModeFlag.ReadOnly):
+            raise RuntimeError(f"Unable to open UI file: {ui_path}")
+        try:
+            loaded_window = loader.load(ui_file, self)
+        finally:
+            ui_file.close()
 
-        self.title_label = QLabel("2026년 제9회 국민대학교 자율주행 경진대회")
-        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.title_label.setFont(QFont("NanumGothic", 28, QFont.Weight.Bold))
-        layout.addWidget(self.title_label)
+        if loaded_window is None:
+            raise RuntimeError(f"Unable to load UI file: {ui_path}")
 
-        top = QWidget(self)
-        top_layout = QVBoxLayout(top)
-        self.team_label = QLabel("TEAM TENSOR")
-        self.team_label.setFont(QFont("NanumGothic", 26, QFont.Weight.Bold))
-        self.school_label = QLabel("충북대학교")
-        self.school_label.setFont(QFont("NanumGothic", 18))
-        self.time_label = QLabel("00.00")
-        self.time_label.setFont(QFont("NanumGothic", 44, QFont.Weight.Bold))
-        self.state_label = QLabel("RUNNING")
-        self.state_label.setFont(QFont("NanumGothic", 30, QFont.Weight.Bold))
-        top_layout.addWidget(self.team_label)
-        top_layout.addWidget(self.school_label)
-        top_layout.addWidget(self.time_label)
-        top_layout.addWidget(self.state_label)
-        layout.addWidget(top)
+        self.setWindowTitle(loaded_window.windowTitle())
+        self.resize(loaded_window.size())
+        self.setStyleSheet(loaded_window.styleSheet())
 
-        self.info_label = QLabel("팀 소개 / 차량 사진 / 학교 로고 영역")
-        self.info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.info_label.setFont(QFont("NanumGothic", 20))
-        self.info_label.setStyleSheet("border: 1px solid #4d5d75; padding: 40px;")
-        layout.addWidget(self.info_label)
+        central_widget = loaded_window.findChild(QWidget, "centralwidget")
+        if central_widget is None:
+            raise RuntimeError("Loaded broadcast_window.ui has no centralwidget")
+        self.setCentralWidget(central_widget)
 
-        self.rank_label = QLabel("1. TEAM TENSOR  18.352")
-        self.rank_label.setFont(QFont("NanumGothic", 18))
-        layout.addWidget(self.rank_label)
+        self.title_label = self._required_label("lblTitle")
+        self.team_label = self._required_label("lblTeam")
+        self.school_label = self._required_label("lblSchool")
+        self.time_label = self._required_label("lblTime")
+        self.state_label = self._required_label("lblState")
+        self.info_label = self._required_label("lblInfo")
+        self.rank_label = self._required_label("lblRank")
+
+    def _required_label(self, object_name: str) -> QLabel:
+        widget = self.findChild(QLabel, object_name)
+        if widget is None:
+            raise RuntimeError(f"Required QLabel not found: {object_name}")
+        return widget
 
     def refresh_from_state(self, state: RaceState) -> None:
         current = state.current_team or {}

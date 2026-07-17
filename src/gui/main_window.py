@@ -1,19 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, Optional
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import (
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
-    QListWidget,
-    QMainWindow,
-    QPushButton,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtCore import QFile, QIODevice, QTimer
+from PySide6.QtUiTools import QUiLoader
+from PySide6.QtWidgets import QLabel, QListWidget, QMainWindow, QPushButton, QWidget
 
 from ..core.race_controller import RaceController
 from ..core.race_state import RaceState
@@ -23,9 +16,11 @@ class MainWindow(QMainWindow):
     def __init__(self, controller: RaceController, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.controller = controller
-        self.setWindowTitle("Race Control Operator")
-        self.resize(1700, 950)
-        self._build_ui()
+        self.summary_labels: Dict[str, QLabel] = {}
+        self.status_labels: Dict[str, QLabel] = {}
+        self._load_ui()
+        self._wire_actions()
+
         self._clock_timer = QTimer(self)
         self._clock_timer.setInterval(1000)
         self._clock_timer.timeout.connect(self._refresh_clock)
@@ -35,88 +30,86 @@ class MainWindow(QMainWindow):
         self.controller.log_changed.connect(self._append_log)
         self.refresh_from_state(self.controller.state)
 
-    def _build_ui(self) -> None:
-        central = QWidget(self)
-        self.setCentralWidget(central)
-        layout = QVBoxLayout(central)
+    def _load_ui(self) -> None:
+        ui_path = Path(__file__).resolve().parent / "ui" / "main_window.ui"
+        loader = QUiLoader()
+        ui_file = QFile(str(ui_path))
+        if not ui_file.open(QIODevice.OpenModeFlag.ReadOnly):
+            raise RuntimeError(f"Unable to open UI file: {ui_path}")
+        try:
+            loaded_window = loader.load(ui_file, self)
+        finally:
+            ui_file.close()
 
-        header = QHBoxLayout()
-        self.current_team_label = QLabel("Current Team")
-        self.current_team_label.setStyleSheet("font-size: 18px; font-weight: bold;")
-        self.next_team_label = QLabel("Next Team")
-        self.next_team_label.setStyleSheet("font-size: 14px;")
-        self.next_next_team_label = QLabel("Next Next Team")
-        self.next_next_team_label.setStyleSheet("font-size: 14px;")
-        self.clock_label = QLabel("--:--:--")
-        self.clock_label.setStyleSheet("font-size: 18px; font-weight: bold;")
-        header.addWidget(self.current_team_label)
-        header.addStretch()
-        header.addWidget(self.clock_label)
-        layout.addLayout(header)
+        if loaded_window is None:
+            raise RuntimeError(f"Unable to load UI file: {ui_path}")
 
-        team_row = QHBoxLayout()
-        team_row.addWidget(self.next_team_label)
-        team_row.addWidget(self.next_next_team_label)
-        layout.addLayout(team_row)
+        self.setWindowTitle(loaded_window.windowTitle())
+        self.resize(loaded_window.size())
+        central_widget = loaded_window.findChild(QWidget, "centralwidget")
+        if central_widget is None:
+            raise RuntimeError("Loaded main_window.ui has no centralwidget")
+        self.setCentralWidget(central_widget)
 
-        summary = QGridLayout()
-        self.summary_labels: Dict[str, QLabel] = {}
-        fields = [
-            ("출전팀", "team"),
-            ("경기상태", "status"),
-            ("신호등", "light"),
-            ("주행시간", "time"),
-            ("랩", "lap"),
-            ("최고기록", "best"),
-            ("현재순위", "rank"),
-        ]
-        for row, (label_text, key) in enumerate(fields):
-            label = QLabel(label_text)
-            label.setStyleSheet("font-size: 16px; font-weight: bold;")
-            value = QLabel("-")
-            value.setStyleSheet("font-size: 16px;")
-            summary.addWidget(label, row, 0)
-            summary.addWidget(value, row, 1)
-            self.summary_labels[key] = value
-        layout.addLayout(summary)
+        self.current_team_label = self._required_label("lblCurrentTeam")
+        self.next_team_label = self._required_label("lblNextTeam")
+        self.next_next_team_label = self._required_label("lblNextNextTeam")
+        self.clock_label = self._required_label("lblClock")
+        self.timer_display = self._required_label("lblTimerDisplay")
+        self.log_list = self._required_list("listLog")
 
-        self.timer_display = QLabel("00.00")
-        self.timer_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.timer_display.setStyleSheet("font-size: 72px; font-weight: bold; background: #111; color: #fff; padding: 20px;")
-        layout.addWidget(self.timer_display)
+        self.summary_labels = {
+            "team": self._required_label("valTeam"),
+            "status": self._required_label("valStatus"),
+            "light": self._required_label("valLight"),
+            "time": self._required_label("valTime"),
+            "lap": self._required_label("valLap"),
+            "best": self._required_label("valBest"),
+            "rank": self._required_label("valRank"),
+        }
 
-        buttons = QHBoxLayout()
-        button_specs = [
-            ("START", self.controller.start),
-            ("STOP", self.controller.stop),
-            ("RESET", self.controller.reset),
-            ("NEXT", self.controller.next_team),
-            ("RETRY", self.controller.retry),
-            ("PENALTY", self.controller.penalty),
-            ("DISQUALIFY", self.controller.disqualify),
-            ("EMERGENCY", self.controller.emergency),
-        ]
-        self.buttons = {}
-        for text, callback in button_specs:
-            button = QPushButton(text)
-            button.clicked.connect(callback)
-            buttons.addWidget(button)
-            self.buttons[text] = button
-        layout.addLayout(buttons)
+        self.status_labels = {
+            "traffic_light_1": self._required_label("statusTrafficLight1"),
+            "traffic_light_2": self._required_label("statusTrafficLight2"),
+            "gate": self._required_label("statusGate"),
+            "wifi": self._required_label("statusWifi"),
+            "ros2": self._required_label("statusRos2"),
+            "win_gui": self._required_label("statusWinGui"),
+            "broadcast": self._required_label("statusBroadcast"),
+            "database": self._required_label("statusDatabase"),
+        }
 
-        status = QGridLayout()
-        self.status_labels: Dict[str, QLabel] = {}
-        for index, label_text in enumerate(["신호등1", "신호등2", "통과감지장치", "WiFi", "ROS2", "WinGUI", "Broadcast", "Database"]):
-            label = QLabel(label_text)
-            label.setStyleSheet("font-size: 14px; padding: 6px;")
-            status.addWidget(label, 0, index)
-            value = QLabel("🟢 OK")
-            self.status_labels[label_text] = value
-            status.addWidget(value, 1, index)
-        layout.addLayout(status)
+    def _wire_actions(self) -> None:
+        button_specs = {
+            "btnStart": self.controller.start,
+            "btnStop": self.controller.stop,
+            "btnReset": self.controller.reset,
+            "btnNext": self.controller.next_team,
+            "btnRetry": self.controller.retry,
+            "btnPenalty": self.controller.penalty,
+            "btnDisqualify": self.controller.disqualify,
+            "btnEmergency": self.controller.emergency,
+        }
+        for object_name, callback in button_specs.items():
+            self._required_button(object_name).clicked.connect(callback)
 
-        self.log_list = QListWidget()
-        layout.addWidget(self.log_list)
+    def _required_label(self, object_name: str) -> QLabel:
+        widget = self.findChild(QLabel, object_name)
+        if widget is None:
+            raise RuntimeError(f"Required QLabel not found: {object_name}")
+        return widget
+
+    def _required_button(self, object_name: str) -> QPushButton:
+        widget = self.findChild(QPushButton, object_name)
+        if widget is None:
+            raise RuntimeError(f"Required QPushButton not found: {object_name}")
+        return widget
+
+    def _required_list(self, object_name: str) -> QListWidget:
+        widget = self.findChild(QListWidget, object_name)
+        if widget is None:
+            raise RuntimeError(f"Required QListWidget not found: {object_name}")
+        return widget
 
     def refresh_from_state(self, state: RaceState) -> None:
         current = state.current_team or {}
@@ -137,19 +130,8 @@ class MainWindow(QMainWindow):
         self.timer_display.setText(f"{state.elapsed_time:05.2f}")
 
         status_badges = self.controller.get_status_badges()
-        for name, label in self.status_labels.items():
-            key = {
-                "신호등1": "traffic_light_1",
-                "신호등2": "traffic_light_2",
-                "통과감지장치": "gate",
-                "WiFi": "wifi",
-                "ROS2": "ros2",
-                "WinGUI": "win_gui",
-                "Broadcast": "broadcast",
-                "Database": "database",
-            }.get(name)
-            if key:
-                label.setText(status_badges.get(key, "🟢 OK"))
+        for key, label in self.status_labels.items():
+            label.setText(status_badges.get(key, "🟢 OK"))
 
         self._refresh_clock()
 
