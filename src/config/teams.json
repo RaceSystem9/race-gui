@@ -1,0 +1,25 @@
+{
+  "teams": [
+    {
+      "number": 11,
+      "team_name": "TENSOR",
+      "school": "충북대학교",
+      "driver": "홍길동",
+      "car_name": "TENSOR X1"
+    },
+    {
+      "number": 12,
+      "team_name": "iCar",
+      "school": "국민대학교",
+      "driver": "김사람",
+      "car_name": "iCar Lite"
+    },
+    {
+      "number": 13,
+      "team_name": "슈퍼카",
+      "school": "수원대학교",
+      "driver": "이친구",
+      "car_name": "Super Car"
+    }
+  ]
+}
