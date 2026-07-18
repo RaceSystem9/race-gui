@@ -57,13 +57,16 @@ class BroadcastWindow(QMainWindow):
 
         self.title_label = self._required_label("lblTitle")
         self.team_label = self._required_label("lblTeam")
+        self.team2_label = self._required_label("lblTeam2")
+        self.team3_label = self._required_label("lblTeam3")
         self.team_no_label = self._required_label("lblTeamNo")
         self.school_label = self._required_label("lblSchool")
         self.school_logo_label = self._required_label("lblSchoolLogo")
         self.time_label = self._required_label("lblTime")
-        self.state_label = self._required_label("lblState")
+        self.state_label = self.findChild(QLabel, "lblState")
         self.info_label = self._required_label("lblInfo")
-        self.rank_label = self._required_label("lblRank")
+        self.rank_round_label = self._required_label("lblRankRound")
+        self.rank_label = self.findChild(QLabel, "lblRank")
         self.mission_total_label = self._required_label("lblMIssionScore")
         self.racing_score_label = self._required_label("lblRacingScore")
         self.total_score_label = self._required_label("lblTotalScore")
@@ -99,10 +102,14 @@ class BroadcastWindow(QMainWindow):
         school_name = current.get("school", "N/A")
 
         self.team_label.setText(current.get("team_name", "N/A"))
+        self.team2_label.setText(self.team_label.text())
+        self.team3_label.setText(self.team_label.text())
+        self.rank_round_label.setText("(1차 오전)" if self.controller.current_round == 1 else "(2차 오후)")
         self.team_no_label.setText(str(team_number))
         self.school_label.setText(school_name)
         self.time_label.setText(f"{state.elapsed_time:05.2f}")
-        self.state_label.setText(state.status)
+        if self.state_label is not None:
+            self.state_label.setText(state.status)
         self._refresh_school_logo(team_number)
         self._refresh_member_info(current)
 
@@ -114,8 +121,8 @@ class BroadcastWindow(QMainWindow):
 
         rank_text = str(state.rank) if state.rank is not None else "-"
         mode_title = self.controller.get_view_mode_title()
-        self.rank_label.setText(f"[{mode_title}] {rank_text}. {team_name}  {total_score:05.2f}")
-        self.info_label.setText(self.controller.get_team_progress_text(team_number))
+        if self.rank_label is not None:
+            self.rank_label.setText(f"[{mode_title}] {rank_text}. {team_name}  {total_score:05.2f}")
 
         self._refresh_ranking_board()
 
@@ -197,7 +204,7 @@ class BroadcastWindow(QMainWindow):
                 school_label.setText(str(row.get("school", "-")))
                 final_time = row.get("final_time")
                 disqualified = bool(row.get("disqualified", False))
-                score_label.setText("DQ" if disqualified or final_time is None else f"{float(final_time):05.2f}")
+                score_label.setText("실격" if disqualified or final_time is None else f"{float(final_time):.2f}")
             else:
                 team_label.setText("-")
                 school_label.setText("-")

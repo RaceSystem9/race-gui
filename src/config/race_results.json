@@ -418,19 +418,19 @@
     }
   },
   {
-    "created_at": "2026-07-18 18:44:11",
+    "created_at": "2026-07-18 20:14:45",
     "round_no": 2,
     "team_number": 1,
     "team_name": "321고",
     "school": "순천향대학교",
-    "elapsed_time": 1.4,
-    "mission_penalty_seconds": 25.0,
-    "manual_penalty_points": 1,
-    "final_time": 26.4,
+    "elapsed_time": 4.3,
+    "mission_penalty_seconds": 0.0,
+    "manual_penalty_points": 0,
+    "final_time": 4.3,
     "disqualified": false,
     "mission_scores": {
       "lblMIssionScore1": 0,
-      "lblMIssionScore2": 5,
+      "lblMIssionScore2": 0,
       "lblMIssionScore3": 0,
       "lblMIssionScore4": 0,
       "lblMIssionScore5": 0
@@ -508,6 +508,25 @@
       "lblMIssionScore1": 0,
       "lblMIssionScore2": 0,
       "lblMIssionScore3": 2,
+      "lblMIssionScore4": 0,
+      "lblMIssionScore5": 0
+    }
+  },
+  {
+    "created_at": "2026-07-18 20:07:21",
+    "round_no": 2,
+    "team_number": 8,
+    "team_name": "KOBOT",
+    "school": "국민대학교",
+    "elapsed_time": 19.3,
+    "mission_penalty_seconds": 0.0,
+    "manual_penalty_points": 0,
+    "final_time": 19.3,
+    "disqualified": false,
+    "mission_scores": {
+      "lblMIssionScore1": 0,
+      "lblMIssionScore2": 0,
+      "lblMIssionScore3": 0,
       "lblMIssionScore4": 0,
       "lblMIssionScore5": 0
     }

@@ -34,7 +34,7 @@ def build_app(headless: bool = False):
             broadcast_window.setGeometry(screens[1].geometry())
             operator_window.setGeometry(screens[0].geometry())
         else:
-            broadcast_window.setGeometry(0, 0, 1920, 1080)
+            broadcast_window.resize(1600, 1000)
 
         operator_window.show()
         broadcast_window.show()
