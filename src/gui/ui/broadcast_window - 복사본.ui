@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>BroadcastWindow</class>
+ <widget class="QMainWindow" name="BroadcastWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1920</width>
+    <height>1080</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Race Control Broadcast</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background: #0e1726; color: #f6f6f6;</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QLabel" name="lblTitle">
+      <property name="text">
+       <string>2026년 제9회 국민대학교 자율주행 경진대회</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">font-size: 28px; font-weight: bold;</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QWidget" name="topWidget">
+      <layout class="QVBoxLayout" name="topLayout">
+       <item>
+        <widget class="QLabel" name="lblTeam">
+         <property name="text"><string>TEAM TENSOR</string></property>
+         <property name="styleSheet"><string notr="true">font-size: 26px; font-weight: bold;</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lblSchool">
+         <property name="text"><string>충북대학교</string></property>
+         <property name="styleSheet"><string notr="true">font-size: 18px;</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lblTime">
+         <property name="text"><string>00.00</string></property>
+         <property name="styleSheet"><string notr="true">font-size: 44px; font-weight: bold;</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lblState">
+         <property name="text"><string>RUNNING</string></property>
+         <property name="styleSheet"><string notr="true">font-size: 30px; font-weight: bold;</string></property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="lblInfo">
+      <property name="text">
+       <string>팀 소개 / 차량 사진 / 학교 로고 영역</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">font-size: 20px; border: 1px solid #4d5d75; padding: 40px;</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="lblRank">
+      <property name="text">
+       <string>1. TEAM TENSOR  18.352</string>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">font-size: 18px;</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
