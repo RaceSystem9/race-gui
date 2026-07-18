@@ -15,6 +15,13 @@ from .race_state import RaceState
 class RaceController(QObject):
     state_changed = Signal(object)
     log_changed = Signal(str)
+    MISSION_SECONDS = {
+        "lblMIssionScore1": 5,
+        "lblMIssionScore2": 5,
+        "lblMIssionScore3": 5,
+        "lblMIssionScore4": 5,
+        "lblMIssionScore5": 5,
+    }
 
     def __init__(self, config_path: Optional[Path] = None, database: Optional[SQLiteManager] = None, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
@@ -30,6 +37,8 @@ class RaceController(QObject):
         self.config_path = config_path or default_config
         self.teams: List[Dict[str, Any]] = self._load_teams()
         self.team_index = 0
+        self.state.mission_scores = self._default_mission_scores()
+        self._run_finalized = False
         self._assign_teams()
 
         self.timer = QTimer(self)
@@ -99,6 +108,11 @@ class RaceController(QObject):
         self.state.timer_running = False
         self.state.elapsed_time = 0.0
         self.state.lap = 1
+        self.state.mission_scores = self._default_mission_scores()
+        self.state.mission_penalty_seconds = 0.0
+        self.state.final_time = None
+        self.state.disqualified = False
+        self._run_finalized = False
         self._record("START button pressed")
         self.countdown_timer.start()
         self._emit_state()
@@ -117,12 +131,15 @@ class RaceController(QObject):
             self._record(f"Countdown {self.state.countdown}")
         self._emit_state()
 
-    def stop(self) -> None:
+    def stop(self, mission_scores: Optional[Dict[str, int]] = None) -> None:
         self.timer.stop()
         self.countdown_timer.stop()
         self.state.timer_running = False
-        self.state.status = "READY"
+        self.state.status = "FINISHED"
         self.state.traffic_light = "YELLOW"
+        if mission_scores is not None:
+            self.set_mission_scores(mission_scores)
+        self._finalize_current_run()
         self._record("STOP button pressed")
         self._emit_state()
 
@@ -137,7 +154,11 @@ class RaceController(QObject):
         self.state.best_lap = None
         self.state.rank = None
         self.state.penalty_points = 0
+        self.state.mission_scores = self._default_mission_scores()
+        self.state.mission_penalty_seconds = 0.0
+        self.state.final_time = None
         self.state.disqualified = False
+        self._run_finalized = False
         self._record("RESET button pressed")
         self._emit_state()
 
@@ -150,6 +171,14 @@ class RaceController(QObject):
         self.state.traffic_light = "RED"
         self.state.elapsed_time = 0.0
         self.state.lap = 0
+        self.state.best_lap = None
+        self.state.rank = None
+        self.state.penalty_points = 0
+        self.state.mission_scores = self._default_mission_scores()
+        self.state.mission_penalty_seconds = 0.0
+        self.state.final_time = None
+        self.state.disqualified = False
+        self._run_finalized = False
         self._record("NEXT team requested")
         self._emit_state()
 
@@ -164,7 +193,11 @@ class RaceController(QObject):
         self.state.best_lap = None
         self.state.rank = None
         self.state.penalty_points = 0
+        self.state.mission_scores = self._default_mission_scores()
+        self.state.mission_penalty_seconds = 0.0
+        self.state.final_time = None
         self.state.disqualified = False
+        self._run_finalized = False
         self._record("RETRY button pressed")
         self._emit_state()
 
@@ -176,6 +209,7 @@ class RaceController(QObject):
     def disqualify(self) -> None:
         self.state.disqualified = True
         self.state.status = "FINISHED"
+        self._finalize_current_run()
         self._record("DISQUALIFY button pressed")
         self._emit_state()
 
@@ -214,3 +248,48 @@ class RaceController(QObject):
             "broadcast": "🟢 OK",
             "database": self.database.status_text(),
         }
+
+    def _default_mission_scores(self) -> Dict[str, int]:
+        return {name: 0 for name in self.MISSION_SECONDS}
+
+    def set_mission_scores(self, mission_scores: Dict[str, int]) -> None:
+        cleaned = self._default_mission_scores()
+        for name, value in mission_scores.items():
+            if name in cleaned:
+                cleaned[name] = max(0, int(value))
+        self.state.mission_scores = cleaned
+
+    def _mission_penalty_seconds(self) -> float:
+        total = 0.0
+        for name, score in self.state.mission_scores.items():
+            total += float(score) * float(self.MISSION_SECONDS.get(name, 0))
+        return total
+
+    def _finalize_current_run(self) -> None:
+        if self._run_finalized:
+            return
+
+        self.state.mission_penalty_seconds = self._mission_penalty_seconds()
+        if self.state.disqualified:
+            self.state.final_time = None
+            self.state.rank = None
+        else:
+            self.state.final_time = round(self.state.elapsed_time + self.state.mission_penalty_seconds, 2)
+
+        current = self.state.current_team or {}
+        result = {
+            "team_number": int(current.get("number", 0) or 0),
+            "team_name": str(current.get("team_name", "N/A")),
+            "school": str(current.get("school", "N/A")),
+            "elapsed_time": float(self.state.elapsed_time),
+            "mission_penalty_seconds": float(self.state.mission_penalty_seconds),
+            "manual_penalty_points": int(self.state.penalty_points),
+            "final_time": self.state.final_time,
+            "disqualified": bool(self.state.disqualified),
+            "mission_scores": dict(self.state.mission_scores),
+        }
+
+        self.database.append_race_result(result)
+        if self.state.final_time is not None:
+            self.state.rank = self.database.rank_for_time(self.state.final_time)
+        self._run_finalized = True

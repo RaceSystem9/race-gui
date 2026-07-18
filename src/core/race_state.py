@@ -26,6 +26,9 @@ class RaceState:
     best_lap: Optional[float] = None
     rank: Optional[int] = None
     penalty_points: int = 0
+    mission_scores: Dict[str, int] = field(default_factory=dict)
+    mission_penalty_seconds: float = 0.0
+    final_time: Optional[float] = None
     disqualified: bool = False
     event_log: List[str] = field(default_factory=list)
     timer_running: bool = False
@@ -44,6 +47,9 @@ class RaceState:
             "best_lap": self.best_lap,
             "rank": self.rank,
             "penalty_points": self.penalty_points,
+            "mission_scores": dict(self.mission_scores),
+            "mission_penalty_seconds": self.mission_penalty_seconds,
+            "final_time": self.final_time,
             "disqualified": self.disqualified,
             "event_log": list(self.event_log),
             "timer_running": self.timer_running,

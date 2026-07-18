@@ -4,9 +4,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
-from PySide6.QtCore import QFile, QIODevice, QTimer
+from PySide6.QtCore import QEvent, QFile, QIODevice, QTimer, Qt
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QLabel, QListWidget, QMainWindow, QPushButton, QWidget
+from PySide6.QtWidgets import QInputDialog, QLabel, QListWidget, QMainWindow, QPushButton, QWidget
 
 from ..core.race_controller import RaceController
 from ..core.race_state import RaceState
@@ -18,6 +18,7 @@ class MainWindow(QMainWindow):
         self.controller = controller
         self.summary_labels: Dict[str, QLabel] = {}
         self.status_labels: Dict[str, QLabel] = {}
+        self.mission_score_labels: Dict[str, QLabel] = {}
         self._load_ui()
         self._wire_actions()
 
@@ -79,10 +80,21 @@ class MainWindow(QMainWindow):
             "database": self._required_label("statusDatabase"),
         }
 
+        self.mission_score_labels = {
+            "lblMIssionScore1": self._required_label("lblMIssionScore1"),
+            "lblMIssionScore2": self._required_label("lblMIssionScore2"),
+            "lblMIssionScore3": self._required_label("lblMIssionScore3"),
+            "lblMIssionScore4": self._required_label("lblMIssionScore4"),
+            "lblMIssionScore5": self._required_label("lblMIssionScore5"),
+        }
+        for label in self.mission_score_labels.values():
+            label.setCursor(Qt.CursorShape.PointingHandCursor)
+            label.setToolTip("더블클릭해서 감점 횟수를 입력하세요")
+            label.installEventFilter(self)
+
     def _wire_actions(self) -> None:
         button_specs = {
             "btnStart": self.controller.start,
-            "btnStop": self.controller.stop,
             "btnReset": self.controller.reset,
             "btnNext": self.controller.next_team,
             "btnRetry": self.controller.retry,
@@ -92,6 +104,7 @@ class MainWindow(QMainWindow):
         }
         for object_name, callback in button_specs.items():
             self._required_button(object_name).clicked.connect(callback)
+        self._required_button("btnStop").clicked.connect(self._on_stop_clicked)
 
     def _required_label(self, object_name: str) -> QLabel:
         widget = self.findChild(QLabel, object_name)
@@ -123,11 +136,16 @@ class MainWindow(QMainWindow):
         self.summary_labels["team"].setText(f"#{current.get('number', 0)} {current.get('team_name', 'N/A')}")
         self.summary_labels["status"].setText(state.status)
         self.summary_labels["light"].setText(state.traffic_light)
-        self.summary_labels["time"].setText(f"{state.elapsed_time:.2f}")
+        summary_time = state.final_time if state.final_time is not None else state.elapsed_time
+        self.summary_labels["time"].setText(f"{summary_time:.2f}")
         self.summary_labels["lap"].setText(str(state.lap))
         self.summary_labels["best"].setText(f"{state.best_lap:.2f}" if state.best_lap is not None else "-")
         self.summary_labels["rank"].setText(str(state.rank) if state.rank is not None else "-")
-        self.timer_display.setText(f"{state.elapsed_time:05.2f}")
+        self.timer_display.setText(f"{summary_time:05.2f}")
+
+        mission_scores = state.mission_scores or {}
+        for name, label in self.mission_score_labels.items():
+            label.setText(str(int(mission_scores.get(name, self._safe_int(label.text())))))
 
         status_badges = self.controller.get_status_badges()
         for key, label in self.status_labels.items():
@@ -141,3 +159,39 @@ class MainWindow(QMainWindow):
 
     def _refresh_clock(self) -> None:
         self.clock_label.setText(datetime.now().strftime("%H:%M:%S"))
+
+    def _on_stop_clicked(self) -> None:
+        self.controller.stop(self._collect_mission_scores())
+
+    def _collect_mission_scores(self) -> Dict[str, int]:
+        scores: Dict[str, int] = {}
+        for name, label in self.mission_score_labels.items():
+            scores[name] = self._safe_int(label.text())
+        return scores
+
+    def eventFilter(self, watched: object, event: QEvent) -> bool:  # noqa: N802
+        if isinstance(watched, QLabel) and watched.objectName() in self.mission_score_labels:
+            if event.type() == QEvent.Type.MouseButtonDblClick:
+                self._edit_mission_score(watched)
+                return True
+        return super().eventFilter(watched, event)
+
+    def _edit_mission_score(self, label: QLabel) -> None:
+        current_value = self._safe_int(label.text())
+        value, accepted = QInputDialog.getInt(
+            self,
+            "미션 감점 횟수 입력",
+            f"{label.objectName()} 감점 횟수:",
+            current_value,
+            0,
+            999,
+            1,
+        )
+        if accepted:
+            label.setText(str(value))
+
+    def _safe_int(self, value: str) -> int:
+        try:
+            return max(0, int(value.strip()))
+        except (TypeError, ValueError, AttributeError):
+            return 0
