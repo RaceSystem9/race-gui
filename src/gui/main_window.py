@@ -6,7 +6,17 @@ from typing import Dict, Optional
 
 from PySide6.QtCore import QEvent, QFile, QIODevice, QTimer, Qt
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QInputDialog, QLabel, QListWidget, QMainWindow, QPushButton, QWidget
+from PySide6.QtWidgets import (
+    QComboBox,
+    QInputDialog,
+    QLabel,
+    QListWidget,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QToolBar,
+    QWidget,
+)
 
 from ..core.race_controller import RaceController
 from ..core.race_state import RaceState
@@ -20,6 +30,7 @@ class MainWindow(QMainWindow):
         self.status_labels: Dict[str, QLabel] = {}
         self.mission_score_labels: Dict[str, QLabel] = {}
         self._load_ui()
+        self._init_round_selector()
         self._wire_actions()
 
         self._clock_timer = QTimer(self)
@@ -98,13 +109,99 @@ class MainWindow(QMainWindow):
             "btnReset": self.controller.reset,
             "btnNext": self.controller.next_team,
             "btnRetry": self.controller.retry,
-            "btnPenalty": self.controller.penalty,
             "btnDisqualify": self.controller.disqualify,
             "btnEmergency": self.controller.emergency,
         }
         for object_name, callback in button_specs.items():
             self._required_button(object_name).clicked.connect(callback)
         self._required_button("btnStop").clicked.connect(self._on_stop_clicked)
+        self._required_button("btnPenalty").clicked.connect(self._on_penalty_clicked)
+
+    def _init_round_selector(self) -> None:
+        self.round_toolbar = QToolBar("Round", self)
+        self.round_toolbar.setObjectName("roundToolbar")
+        self.round_toolbar.setMovable(False)
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.round_toolbar)
+
+        round_label = QLabel("라운드:", self)
+        self.round_toolbar.addWidget(round_label)
+
+        self.round_selector = QComboBox(self)
+        self.round_selector.addItem("1차", 1)
+        self.round_selector.addItem("2차", 2)
+        self.round_selector.setCurrentIndex(0 if self.controller.current_round == 1 else 1)
+        self.round_selector.currentIndexChanged.connect(self._on_round_changed)
+        self.round_toolbar.addWidget(self.round_selector)
+
+        self.round_toolbar.addSeparator()
+        view_mode_label = QLabel("보기:", self)
+        self.round_toolbar.addWidget(view_mode_label)
+
+        self.view_mode_selector = QComboBox(self)
+        self.view_mode_selector.addItem("1차", self.controller.VIEW_MODE_ROUND1)
+        self.view_mode_selector.addItem("2차", self.controller.VIEW_MODE_ROUND2)
+        self.view_mode_selector.addItem("최종", self.controller.VIEW_MODE_FINAL)
+        self.view_mode_selector.currentIndexChanged.connect(self._on_view_mode_changed)
+        self.round_toolbar.addWidget(self.view_mode_selector)
+
+        self.round_toolbar.addSeparator()
+        self.publish_final_button = QPushButton("최종 발표 확정", self)
+        self.publish_final_button.clicked.connect(self._on_publish_final_clicked)
+        self.round_toolbar.addWidget(self.publish_final_button)
+
+        self.round_toolbar.addSeparator()
+        self.progress_label = QLabel("진행: -", self)
+        self.round_toolbar.addWidget(self.progress_label)
+
+        self._sync_view_mode_selector()
+
+    def _on_round_changed(self, index: int) -> None:
+        round_no = int(self.round_selector.itemData(index) or 1)
+        self.controller.set_round(round_no)
+
+    def _on_view_mode_changed(self, index: int) -> None:
+        view_mode = str(self.view_mode_selector.itemData(index) or self.controller.VIEW_MODE_ROUND1)
+        self.controller.set_view_mode(view_mode)
+
+    def _sync_view_mode_selector(self) -> None:
+        target_mode = self.controller.view_mode
+        for i in range(self.view_mode_selector.count()):
+            if str(self.view_mode_selector.itemData(i)) == target_mode:
+                self.view_mode_selector.blockSignals(True)
+                self.view_mode_selector.setCurrentIndex(i)
+                self.view_mode_selector.blockSignals(False)
+                return
+
+    def _on_publish_final_clicked(self) -> None:
+        preview_text = self._build_final_top3_preview_text()
+        reply = QMessageBox.question(
+            self,
+            "최종 발표 확인",
+            (
+                "현재 최종 순위를 확정하시겠습니까?\n"
+                "확정 후에는 해당 시점 순위가 스냅샷으로 저장됩니다.\n\n"
+                f"{preview_text}"
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        snapshot_id = self.controller.publish_final_snapshot()
+        QMessageBox.information(self, "최종 발표", f"최종 순위 스냅샷 저장 완료: #{snapshot_id}")
+
+    def _build_final_top3_preview_text(self) -> str:
+        rows = self.controller.get_final_leaderboard(limit=3)
+        if not rows:
+            return "상위 3팀 미리보기: 집계된 최종 기록이 없습니다."
+
+        lines = ["상위 3팀 미리보기"]
+        for index, row in enumerate(rows, start=1):
+            team_name = str(row.get("team_name", "-"))
+            final_time = row.get("final_time")
+            score_text = "DQ" if final_time is None else f"{float(final_time):05.2f}"
+            lines.append(f"{index}. {team_name}  {score_text}")
+        return "\n".join(lines)
 
     def _required_label(self, object_name: str) -> QLabel:
         widget = self.findChild(QLabel, object_name)
@@ -126,6 +223,11 @@ class MainWindow(QMainWindow):
 
     def refresh_from_state(self, state: RaceState) -> None:
         current = state.current_team or {}
+        self.round_selector.blockSignals(True)
+        self.round_selector.setCurrentIndex(0 if self.controller.current_round == 1 else 1)
+        self.round_selector.blockSignals(False)
+        self._sync_view_mode_selector()
+
         self.current_team_label.setText(
             f"현재팀 : {current.get('school', 'N/A')} / {current.get('team_name', 'N/A')} / {current.get('driver', 'N/A')}"
         )
@@ -142,6 +244,9 @@ class MainWindow(QMainWindow):
         self.summary_labels["best"].setText(f"{state.best_lap:.2f}" if state.best_lap is not None else "-")
         self.summary_labels["rank"].setText(str(state.rank) if state.rank is not None else "-")
         self.timer_display.setText(f"{summary_time:05.2f}")
+
+        team_number = int(current.get("number", 0) or 0)
+        self.progress_label.setText(f"진행: {self.controller.get_team_progress_text(team_number)}")
 
         mission_scores = state.mission_scores or {}
         for name, label in self.mission_score_labels.items():
@@ -162,6 +267,9 @@ class MainWindow(QMainWindow):
 
     def _on_stop_clicked(self) -> None:
         self.controller.stop(self._collect_mission_scores())
+
+    def _on_penalty_clicked(self) -> None:
+        self.controller.penalty(self._collect_mission_scores())
 
     def _collect_mission_scores(self) -> Dict[str, int]:
         scores: Dict[str, int] = {}

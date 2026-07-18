@@ -15,6 +15,7 @@ from .race_state import RaceState
 class RaceController(QObject):
     state_changed = Signal(object)
     log_changed = Signal(str)
+    leaderboard_changed = Signal()
     MISSION_SECONDS = {
         "lblMIssionScore1": 5,
         "lblMIssionScore2": 5,
@@ -22,6 +23,9 @@ class RaceController(QObject):
         "lblMIssionScore4": 5,
         "lblMIssionScore5": 5,
     }
+    VIEW_MODE_ROUND1 = "ROUND1"
+    VIEW_MODE_ROUND2 = "ROUND2"
+    VIEW_MODE_FINAL = "FINAL"
 
     def __init__(self, config_path: Optional[Path] = None, database: Optional[SQLiteManager] = None, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
@@ -38,6 +42,10 @@ class RaceController(QObject):
         self.teams: List[Dict[str, Any]] = self._load_teams()
         self.team_index = 0
         self.state.mission_scores = self._default_mission_scores()
+        self.current_round = 1
+        self.view_mode = self.VIEW_MODE_ROUND1
+        latest_snapshot = self.database.get_latest_final_snapshot()
+        self.final_snapshot_id = int(latest_snapshot["id"]) if latest_snapshot else None
         self._run_finalized = False
         self._assign_teams()
 
@@ -140,6 +148,9 @@ class RaceController(QObject):
         if mission_scores is not None:
             self.set_mission_scores(mission_scores)
         self._finalize_current_run()
+        # Emit leaderboard update immediately after persistence.
+        self.leaderboard_changed.emit()
+        self._emit_state()
         self._record("STOP button pressed")
         self._emit_state()
 
@@ -201,8 +212,14 @@ class RaceController(QObject):
         self._record("RETRY button pressed")
         self._emit_state()
 
-    def penalty(self) -> None:
+    def penalty(self, mission_scores: Optional[Dict[str, int]] = None) -> None:
+        if mission_scores is not None:
+            self.set_mission_scores(mission_scores)
         self.state.penalty_points += 1
+        if self.state.status == "FINISHED" or self._run_finalized:
+            self._finalize_current_run(force_update=True)
+            self.leaderboard_changed.emit()
+            self._emit_state()
         self._record(f"Penalty applied: {self.state.penalty_points}")
         self._emit_state()
 
@@ -249,6 +266,79 @@ class RaceController(QObject):
             "database": self.database.status_text(),
         }
 
+    def get_round_leaderboard(self, limit: int = 22) -> List[Dict[str, Any]]:
+        return self.database.get_leaderboard(limit=limit, round_no=self.current_round)
+
+    def get_final_leaderboard(self, limit: int = 22) -> List[Dict[str, Any]]:
+        return self.database.get_final_leaderboard_best_of_two(limit=limit)
+
+    def get_active_leaderboard(self, limit: int = 22) -> List[Dict[str, Any]]:
+        if self.view_mode == self.VIEW_MODE_ROUND1:
+            return self.database.get_leaderboard(limit=limit, round_no=1)
+        if self.view_mode == self.VIEW_MODE_ROUND2:
+            return self.database.get_leaderboard(limit=limit, round_no=2)
+        if self.final_snapshot_id is not None:
+            snapshot = self.database.get_final_snapshot(self.final_snapshot_id)
+            if snapshot:
+                rows = snapshot.get("rows", [])
+                if isinstance(rows, list):
+                    return [row for row in rows if isinstance(row, dict)][: int(limit)]
+        return self.database.get_final_leaderboard_best_of_two(limit=limit)
+
+    def set_view_mode(self, view_mode: str) -> None:
+        allowed = {self.VIEW_MODE_ROUND1, self.VIEW_MODE_ROUND2, self.VIEW_MODE_FINAL}
+        normalized = str(view_mode).upper().strip()
+        self.view_mode = normalized if normalized in allowed else self.VIEW_MODE_ROUND1
+        if self.view_mode == self.VIEW_MODE_ROUND1:
+            self.current_round = 1
+        elif self.view_mode == self.VIEW_MODE_ROUND2:
+            self.current_round = 2
+        self.leaderboard_changed.emit()
+        self._emit_state()
+
+    def get_view_mode_title(self) -> str:
+        if self.view_mode == self.VIEW_MODE_ROUND2:
+            return "2차"
+        if self.view_mode == self.VIEW_MODE_FINAL:
+            return "최종"
+        return "1차"
+
+    def publish_final_snapshot(self) -> int:
+        limit = max(22, len(self.teams))
+        rows = self.database.get_final_leaderboard_best_of_two(limit=limit)
+        snapshot_id = self.database.save_final_snapshot(rows)
+        self.final_snapshot_id = snapshot_id
+        self._record(f"FINAL snapshot saved: #{snapshot_id}")
+        self._emit_state()
+        return snapshot_id
+
+    def get_team_progress_map(self) -> Dict[int, Dict[str, bool]]:
+        return self.database.get_team_progress_map()
+
+    def get_team_progress_text(self, team_number: int) -> str:
+        team_no = int(team_number or 0)
+        info = self.get_team_progress_map().get(
+            team_no,
+            {"round1_done": False, "round2_done": False, "final_confirmed": False},
+        )
+        return (
+            f"1차 {'완료' if info.get('round1_done') else '미완료'} | "
+            f"2차 {'완료' if info.get('round2_done') else '미완료'} | "
+            f"최종 {'확정' if info.get('final_confirmed') else '미확정'}"
+        )
+
+    def get_team_progress_short(self, team_number: int) -> str:
+        team_no = int(team_number or 0)
+        info = self.get_team_progress_map().get(
+            team_no,
+            {"round1_done": False, "round2_done": False, "final_confirmed": False},
+        )
+        return (
+            f"1{'O' if info.get('round1_done') else 'X'}/"
+            f"2{'O' if info.get('round2_done') else 'X'}/"
+            f"F{'O' if info.get('final_confirmed') else 'X'}"
+        )
+
     def _default_mission_scores(self) -> Dict[str, int]:
         return {name: 0 for name in self.MISSION_SECONDS}
 
@@ -259,14 +349,21 @@ class RaceController(QObject):
                 cleaned[name] = max(0, int(value))
         self.state.mission_scores = cleaned
 
+    def set_round(self, round_no: int) -> None:
+        self.current_round = 1 if int(round_no) <= 1 else 2
+        self.view_mode = self.VIEW_MODE_ROUND1 if self.current_round == 1 else self.VIEW_MODE_ROUND2
+        self._record(f"ROUND changed to {self.current_round}")
+        self.leaderboard_changed.emit()
+        self._emit_state()
+
     def _mission_penalty_seconds(self) -> float:
         total = 0.0
         for name, score in self.state.mission_scores.items():
             total += float(score) * float(self.MISSION_SECONDS.get(name, 0))
         return total
 
-    def _finalize_current_run(self) -> None:
-        if self._run_finalized:
+    def _finalize_current_run(self, force_update: bool = False) -> None:
+        if self._run_finalized and not force_update:
             return
 
         self.state.mission_penalty_seconds = self._mission_penalty_seconds()
@@ -278,6 +375,7 @@ class RaceController(QObject):
 
         current = self.state.current_team or {}
         result = {
+            "round_no": int(self.current_round),
             "team_number": int(current.get("number", 0) or 0),
             "team_name": str(current.get("team_name", "N/A")),
             "school": str(current.get("school", "N/A")),
@@ -291,5 +389,5 @@ class RaceController(QObject):
 
         self.database.append_race_result(result)
         if self.state.final_time is not None:
-            self.state.rank = self.database.rank_for_time(self.state.final_time)
+            self.state.rank = self.database.rank_for_time(self.state.final_time, round_no=self.current_round)
         self._run_finalized = True

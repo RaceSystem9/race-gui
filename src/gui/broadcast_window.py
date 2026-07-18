@@ -29,6 +29,7 @@ class BroadcastWindow(QMainWindow):
         self._clock_timer.start()
 
         self.controller.state_changed.connect(self.refresh_from_state)
+        self.controller.leaderboard_changed.connect(self._refresh_ranking_board)
         self.refresh_from_state(self.controller.state)
 
     def _load_ui(self) -> None:
@@ -112,7 +113,9 @@ class BroadcastWindow(QMainWindow):
         self.total_score_label.setText(f"{total_score:05.2f}")
 
         rank_text = str(state.rank) if state.rank is not None else "-"
-        self.rank_label.setText(f"{rank_text}. {team_name}  {total_score:05.2f}")
+        mode_title = self.controller.get_view_mode_title()
+        self.rank_label.setText(f"[{mode_title}] {rank_text}. {team_name}  {total_score:05.2f}")
+        self.info_label.setText(self.controller.get_team_progress_text(team_number))
 
         self._refresh_ranking_board()
 
@@ -169,7 +172,20 @@ class BroadcastWindow(QMainWindow):
         return total_seconds
 
     def _refresh_ranking_board(self) -> None:
-        rows = self.controller.database.get_leaderboard(limit=22)
+        rows = self.controller.get_active_leaderboard(limit=22)
+        progress_map = self.controller.get_team_progress_map()
+
+        def _short_progress(team_no: int) -> str:
+            info = progress_map.get(
+                int(team_no or 0),
+                {"round1_done": False, "round2_done": False, "final_confirmed": False},
+            )
+            return (
+                f"1{'O' if info.get('round1_done') else 'X'}/"
+                f"2{'O' if info.get('round2_done') else 'X'}/"
+                f"F{'O' if info.get('final_confirmed') else 'X'}"
+            )
+
         for rank in range(1, 23):
             team_label = self.rank_team_labels[rank]
             school_label = self.rank_school_labels[rank]
