@@ -1,4 +1,14 @@
 ===================
+주행 데이터 저장 위치
+C:\Users\xytron\Desktop\RaceManager\race-gui\src\config
+
+===================
+팀 정보를 담은 json 제작하기
+
+team_info.xlsx - 팀 정보가 들어 있는 엑셀 (수작업으로 제작함)
+make_json_from_team_info_xlsx.py - 위 엑셀파일로 json 파일 제작할 때 사용
+  이 파이썬 그냥 실행하면 알아서 team_info.xlsx 읽어서 team_info.json 생성함.
+  
 경기 결과는 
 race_control.db 파일과 race_results.json 파일에 저장됩니다. 
 

@@ -248,10 +248,10 @@ class RaceController(QObject):
         self.state.append_log(message)
         self.database.append_event(message)
         self.log_changed.emit(message)
-        self.websocket_client.send_state(self.state.snapshot())
 
     def _emit_state(self) -> None:
         self.state.last_update = time.time()
+        self.websocket_client.send_state(self.state.snapshot())
         self.state_changed.emit(self.state)
 
     def get_status_badges(self) -> Dict[str, str]:
