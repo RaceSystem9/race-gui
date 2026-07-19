@@ -1,39 +1,39 @@
 [
   {
-    "created_at": "2026-07-18 18:52:27",
+    "created_at": "2026-07-19 14:17:33",
     "round_no": 1,
     "team_number": 1,
     "team_name": "321고",
     "school": "순천향대학교",
-    "elapsed_time": 3.1,
-    "mission_penalty_seconds": 25.0,
-    "manual_penalty_points": 1,
-    "final_time": 28.1,
+    "elapsed_time": 1.0,
+    "mission_penalty_seconds": 0.0,
+    "manual_penalty_points": 0,
+    "final_time": 1.0,
     "disqualified": false,
     "mission_scores": {
       "lblMIssionScore1": 0,
-      "lblMIssionScore2": 5,
+      "lblMIssionScore2": 0,
       "lblMIssionScore3": 0,
       "lblMIssionScore4": 0,
       "lblMIssionScore5": 0
     }
   },
   {
-    "created_at": "2026-07-18 18:15:39",
+    "created_at": "2026-07-19 14:08:19",
     "round_no": 1,
     "team_number": 2,
     "team_name": "ACCA",
     "school": "숭실대학교",
-    "elapsed_time": 45.2,
-    "mission_penalty_seconds": 15.0,
-    "manual_penalty_points": 2,
-    "final_time": 60.2,
+    "elapsed_time": 2.5,
+    "mission_penalty_seconds": 0.0,
+    "manual_penalty_points": 0,
+    "final_time": 2.5,
     "disqualified": false,
     "mission_scores": {
       "lblMIssionScore1": 0,
-      "lblMIssionScore2": 2,
-      "lblMIssionScore3": 2,
-      "lblMIssionScore4": 1,
+      "lblMIssionScore2": 0,
+      "lblMIssionScore3": 0,
+      "lblMIssionScore4": 0,
       "lblMIssionScore5": 0
     }
   },

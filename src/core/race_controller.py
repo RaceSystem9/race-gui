@@ -32,7 +32,10 @@ class RaceController(QObject):
         self.state = RaceState()
         self.database = database or SQLiteManager()
         self.websocket_client = WebSocketClient()
+        self.websocket_client.connection_changed.connect(self._on_connection_changed)
+        self.websocket_client.ack_status_changed.connect(self._on_ack_status_changed)
         self.websocket_client.connect()
+        self._last_sent_traffic_light: Optional[str] = None
 
         config_dir = Path(__file__).resolve().parents[1] / "config"
         default_config = config_dir / "team_info.json"
@@ -252,15 +255,53 @@ class RaceController(QObject):
     def _emit_state(self) -> None:
         self.state.last_update = time.time()
         self.websocket_client.send_state(self.state.snapshot())
+        self._sync_traffic_light_command()
+        self.state_changed.emit(self.state)
+
+    def _sync_traffic_light_command(self) -> None:
+        current_light = str(self.state.traffic_light).upper()
+        if current_light == self._last_sent_traffic_light:
+            return
+        self.websocket_client.send_command("set_traffic_light", {"color": current_light})
+        self._last_sent_traffic_light = current_light
+
+    def _on_connection_changed(self, connected: bool) -> None:
+        if connected:
+            # Force light command resend after reconnect.
+            self._last_sent_traffic_light = None
+            self.websocket_client.send_state(self.state.snapshot())
+            self._sync_traffic_light_command()
+        self.state_changed.emit(self.state)
+
+    def _on_ack_status_changed(self, _ok: bool) -> None:
         self.state_changed.emit(self.state)
 
     def get_status_badges(self) -> Dict[str, str]:
+        connected = self.websocket_client.is_connected
+        ack_state = self.websocket_client.ack_state
+
+        if not connected:
+            wifi_badge = "🔴 OFF"
+            ros2_badge = "🔴 OFF"
+        elif ack_state == "ok":
+            wifi_badge = "🟢 OK"
+            ros2_badge = "🟢 OK"
+        elif ack_state == "pending":
+            wifi_badge = "🟡 WAIT"
+            ros2_badge = "🟡 WAIT"
+        elif ack_state == "failed":
+            wifi_badge = "🟡 WARN"
+            ros2_badge = "🔴 OFF"
+        else:
+            wifi_badge = "🟢 OK"
+            ros2_badge = "🟡 READY"
+
         return {
-            "traffic_light_1": "🟢 OK" if self.websocket_client.is_connected else "🔴 OFF",
-            "traffic_light_2": "🟢 OK" if self.websocket_client.is_connected else "🔴 OFF",
-            "gate": "🟢 OK" if self.websocket_client.is_connected else "🔴 OFF",
-            "wifi": "🟢 OK" if self.websocket_client.is_connected else "🔴 OFF",
-            "ros2": "🟢 OK" if self.websocket_client.is_connected else "🔴 OFF",
+            "traffic_light_1": "🟢 OK" if connected else "🔴 OFF",
+            "traffic_light_2": "🟢 OK" if connected else "🔴 OFF",
+            "gate": "🟢 OK" if connected else "🔴 OFF",
+            "wifi": wifi_badge,
+            "ros2": ros2_badge,
             "win_gui": "🟢 OK",
             "broadcast": "🟢 OK",
             "database": self.database.status_text(),

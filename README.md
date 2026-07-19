@@ -55,3 +55,42 @@ themes/
 ---
 
 RaceSystem Project
+
+## Local WebSocket Simulation Test
+
+Use the local test server when the Raspberry Pi implementation is incomplete.
+
+1. Start server (normal ACK)
+
+```powershell
+python websocket_server.py --host 0.0.0.0 --port 8765
+```
+
+2. Start server with realistic instability simulation
+
+```powershell
+python websocket_server.py --host 0.0.0.0 --port 8765 --ack-delay-ms 120 --ack-jitter-ms 200 --ack-drop-rate 0.1 --ack-fail-rate 0.05 --disconnect-after-ack-rate 0.05
+```
+
+3. Run LED command test client (single)
+
+```powershell
+python tools/ws_led_test_client.py --host 127.0.0.1 --port 8765 --color GREEN
+```
+
+4. Run repeated reliability test
+
+```powershell
+python tools/ws_led_test_client.py --host 127.0.0.1 --port 8765 --color RED --repeat 30 --interval 0.2 --timeout 2.0
+```
+
+Notes:
+- The app client sends set_traffic_light and expects ACK messages.
+- ACK payload supports status=ok/fail and can be delayed, dropped, or followed by simulated disconnect.
+- race-gui WebSocket endpoint can be changed with environment variables before launch:
+
+```powershell
+$env:RACE_WS_HOST = "127.0.0.1"
+$env:RACE_WS_PORT = "8765"
+python main.py
+```
