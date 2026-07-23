@@ -1,24 +1,41 @@
 #!/usr/bin/env python3
 
-from __future__ import annotations
-
-import argparse
 import asyncio
+import argparse
 import json
 import os
+import signal
 import socket
+import subprocess
 import threading
+import sys
 import time
-from typing import Any, Dict, Tuple
+
+from typing import Dict, Tuple
 
 import websockets
 
 import rclpy
-from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
-from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
+from rclpy.executors import MultiThreadedExecutor
+
+from rclpy.qos import (
+    QoSProfile,
+    HistoryPolicy,
+    ReliabilityPolicy,
+)
+
 from std_msgs.msg import Int32MultiArray
 
+############################################################
+# Config
+############################################################
+
+ROS_DOMAIN_ID = "0"
+MICROROS_PORT = "8888"
+HEARTBEAT_TIMEOUT = 3.0
+VERBOSE_AGENT = False
+    
 # =============================================================================
 # [1. 프로토콜 상수 및 색상/상태 매핑] (ROS2 Communication Protocol v1.0 기준)
 # =============================================================================
@@ -46,6 +63,8 @@ class IntegratedControlNode(Node):
     def __init__(self):
         super().__init__("integrated_control_node")
 
+        self.device_manager = DeviceManager()
+
         self.start_time = time.monotonic()
         # 장치 식별자 키: (device_id, sensor_id) -> last_heartbeat_time
         self.device_heartbeats: Dict[Tuple[int, int], float] = {}
@@ -69,24 +88,43 @@ class IntegratedControlNode(Node):
         # Publishers & Subscribers (Protocol 2항)
         # ---------------------------------------------------------------------
         # Traffic Light Publisher
-        self.pub_tf_control = self.create_publisher(
-            Int32MultiArray, "/tf_light_control", self.reliable_qos
+        self.pub_tf1_control = self.create_publisher(
+            Int32MultiArray, "/tflight1/control", self.reliable_qos
+        )
+        
+        # Traffic Light Publisher
+        self.pub_tf2_control = self.create_publisher(
+            Int32MultiArray, "/tflight2/control", self.reliable_qos
         )
 
         # Traffic Light Subscribers
         self.create_subscription(
-            Int32MultiArray, "/tf_light_status", self.tf_status_callback, self.best_effort_qos
+            Int32MultiArray, "/tflight1/status", self.tf_status_callback, self.best_effort_qos
         )
         self.create_subscription(
-            Int32MultiArray, "/tf_light_heartbeat", self.tf_heartbeat_callback, self.best_effort_qos
+            Int32MultiArray, "/tflight1/heartbeat", self.tf_heartbeat_callback, self.best_effort_qos
+        )
+        
+        self.create_subscription(
+            Int32MultiArray, "/tflight2/status", self.tf_status_callback, self.best_effort_qos
+        )
+        self.create_subscription(
+            Int32MultiArray, "/tflight2/heartbeat", self.tf_heartbeat_callback, self.best_effort_qos
         )
 
         # Gate Sensor Subscribers
         self.create_subscription(
-            Int32MultiArray, "/gate_trigger", self.gate_trigger_callback, self.reliable_qos
+            Int32MultiArray, "/gate1/trigger", self.gate_trigger_callback, self.reliable_qos
         )
         self.create_subscription(
-            Int32MultiArray, "/gate_heartbeat", self.gate_heartbeat_callback, self.best_effort_qos
+            Int32MultiArray, "/gate1/heartbeat", self.gate_heartbeat_callback, self.best_effort_qos
+        )
+
+        self.create_subscription(
+            Int32MultiArray, "/gate2/trigger", self.gate_trigger_callback, self.reliable_qos
+        )
+        self.create_subscription(
+            Int32MultiArray, "/gate2/heartbeat", self.gate_heartbeat_callback, self.best_effort_qos
         )
 
         self.get_logger().info("Integrated ROS 2 Control Node Started (Multi-Device Ready)")
@@ -120,7 +158,21 @@ class IntegratedControlNode(Node):
         data = list(msg.data)
         if len(data) >= 4:
             dev_id, sen_id = data[1], data[2]
-            self.device_heartbeats[(dev_id, sen_id)] = time.monotonic()
+            #self.device_heartbeats[(dev_id, sen_id)] = time.monotonic()
+
+            device_type = "Unknown"
+
+            if dev_id >= 200:
+                device_type = "Traffic Light"
+
+            elif dev_id >= 100:
+                device_type = "Gate Sensor"
+
+            self.device_manager.update(
+                dev_id,
+                sen_id,
+                device_type
+            )
 
     def gate_trigger_callback(self, msg: Int32MultiArray):
         data = list(msg.data)
@@ -149,23 +201,280 @@ class IntegratedControlNode(Node):
         data = list(msg.data)
         if len(data) >= 4:
             dev_id, sen_id = data[1], data[2]
-            self.device_heartbeats[(dev_id, sen_id)] = time.monotonic()
+            #self.device_heartbeats[(dev_id, sen_id)] = time.monotonic()
 
+            device_type = "Unknown"
+
+            if dev_id >= 200:
+                device_type = "Traffic Light"
+
+            elif dev_id >= 100:
+                device_type = "Gate Sensor"
+
+            self.device_manager.update(
+                dev_id,
+                sen_id,
+                device_type
+            )
 
 def heartbeat_monitor(node: IntegratedControlNode):
     """등록된 모든 장치의 생존 상태 모니터링 스레드"""
     while rclpy.ok():
-        now = time.monotonic()
-        for (dev_id, sen_id), last_time in list(node.device_heartbeats.items()):
-            if now - last_time > 3.0:
-                print(f"\n[WARNING] HEARTBEAT TIMEOUT -> Device ID: {dev_id}, Sensor ID: {sen_id}")
-                node.device_heartbeats[(dev_id, sen_id)] = now  # 경고 중복 출력 방지용 갱신
+        #now = time.monotonic()
+        #for (dev_id, sen_id), last_time in list(node.device_heartbeats.items()):
+        #    if now - last_time > 3.0:
+        #        print(f"\n[WARNING] HEARTBEAT TIMEOUT -> Device ID: {dev_id}, Sensor ID: {sen_id}")
+        #        node.device_heartbeats[(dev_id, sen_id)] = now  # 경고 중복 출력 방지용 갱신
+        
+        node.device_manager.check_timeout()
+       
         time.sleep(1)
 
 
 # =============================================================================
 # [3. WebSocket Server & Client Handler]
 # =============================================================================
+
+############################################################
+# Agent Manager
+############################################################
+
+class AgentManager:
+
+    def __init__(self):
+
+        self.process = None
+        self.stdout_thread = None
+
+    def start(self):
+
+        print()
+        print("==================================================")
+        print("Starting micro-ROS Agent...")
+        print("==================================================")
+
+        cmd = [
+            "bash",
+            "-c",
+            f"""
+            source ~/microros_ws/install/local_setup.bash
+            export ROS_DOMAIN_ID={ROS_DOMAIN_ID}
+            ros2 run micro_ros_agent micro_ros_agent udp4 --port {MICROROS_PORT}
+            """
+        ]
+
+        self.process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+
+        self.stdout_thread = threading.Thread(
+            target=self._read_stdout,
+            daemon=True
+        )
+
+        self.stdout_thread.start()
+
+        print("[ OK ] micro-ROS Agent Started.")
+        print()
+
+    def _read_stdout(self):
+
+        while self.process.poll() is None:
+
+            line = self.process.stdout.readline()
+
+            if not line:
+                continue
+
+            line = line.rstrip()
+
+            if VERBOSE_AGENT:
+                print(f"[Agent] {line}")
+
+    def stop(self):
+
+        if self.process is None:
+            return
+
+        print()
+
+        print("Stopping micro-ROS Agent...")
+
+        self.process.terminate()
+
+        try:
+            self.process.wait(timeout=5)
+
+        except subprocess.TimeoutExpired:
+
+            print("Force Kill")
+
+            self.process.kill()
+
+        print("micro-ROS Agent Stopped.")
+
+############################################################
+# Device Manager
+############################################################
+
+class DeviceInfo:
+
+    def __init__(self, device_id: int, sensor_id: int, device_type: str):
+
+        self.device_id = device_id
+        self.sensor_id = sensor_id
+        self.device_type = device_type
+
+        self.connected = False
+        self.first_seen = 0.0
+        self.last_seen = 0.0
+
+
+class DeviceManager:
+
+    def __init__(self):
+
+        self.devices = {}
+
+    def update(self, device_id: int, sensor_id: int, device_type: str):
+
+        key = (device_id, sensor_id)
+        now = time.monotonic()
+
+        if key not in self.devices:
+
+            info = DeviceInfo(device_id, sensor_id, device_type)
+            info.connected = True
+            info.first_seen = now
+            info.last_seen = now
+
+            self.devices[key] = info
+
+            print()
+            print("==================================================")
+            print("DEVICE CONNECTED")
+            print("==================================================")
+            print(f"Type      : {device_type}")
+            print(f"Device ID : {device_id}")
+            print(f"Sensor ID : {sensor_id}")
+            print()
+
+        else:
+
+            info = self.devices[key]
+
+            if not info.connected:
+
+                info.connected = True
+
+                print()
+                print("==================================================")
+                print("DEVICE RECONNECTED")
+                print("==================================================")
+                print(f"Type      : {device_type}")
+                print(f"Device ID : {device_id}")
+                print(f"Sensor ID : {sensor_id}")
+                print()
+
+            info.last_seen = now
+
+    def check_timeout(self):
+
+        now = time.monotonic()
+
+        for info in self.devices.values():
+
+            if info.connected:
+
+                if now - info.last_seen > HEARTBEAT_TIMEOUT:
+
+                    info.connected = False
+
+                    print()
+                    print("==================================================")
+                    print("DEVICE DISCONNECTED")
+                    print("==================================================")
+                    print(f"Type      : {info.device_type}")
+                    print(f"Device ID : {info.device_id}")
+                    print(f"Sensor ID : {info.sensor_id}")
+                    print()
+
+    def get_connected_count(self):
+
+        return sum(
+            1
+            for d in self.devices.values()
+            if d.connected
+        )
+
+############################################################
+# Console Dashboard
+############################################################
+
+import os
+from datetime import datetime
+
+class ConsoleDashboard:
+
+    def __init__(self):
+
+        self.browser_clients = 0
+
+    def draw(self, node):
+
+        os.system("clear")
+
+        print("=" * 60)
+        print("              XYCAR RACE INTEGRATED SERVER")
+        print("=" * 60)
+        print()
+
+        print(f"Time            : {datetime.now():%Y-%m-%d %H:%M:%S}")
+        print()
+
+        print("micro-ROS Agent : RUNNING")
+        print("ROS2            : RUNNING")
+        print("WebSocket       : RUNNING")
+        print()
+
+        print(f"Browser Clients : {self.browser_clients}")
+
+        print()
+        print("-" * 60)
+        print("Connected Devices")
+        print("-" * 60)
+        print()
+
+        for dev in sorted(
+            node.device_manager.devices.values(),
+            key=lambda x: (x.device_id, x.sensor_id),
+        ):
+
+            icon = "🟢" if dev.connected else "🔴"
+
+            print(
+                f"{icon} "
+                f"{dev.device_type:<16} "
+                f"{dev.device_id}-{dev.sensor_id}"
+            )
+
+        print()
+        print("-" * 60)
+        print("Race Status")
+        print("-" * 60)
+        print()
+
+        print("State           : READY")
+        print("Current Team    : -")
+        print("Elapsed Time    : -")
+        print()
+
+        print("=" * 60)
+
 async def broadcast_to_clients(message: str):
     """접속된 모든 웹소켓 클라이언트에 메시지 송신 (Gate Sensor 감지 등)"""
     if CONNECTED_CLIENTS:
@@ -265,21 +574,36 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--port", default=int(os.getenv("WS_PORT", "8765")), type=int, help="Bind port")
     return parser.parse_args()
 
+def dashboard_thread(node, dashboard):
+
+    while rclpy.ok():
+
+        dashboard.draw(node)
+
+        time.sleep(1)
 
 async def main():
     args = _parse_args()
 
     # 1. ROS 2 초기화
     rclpy.init()
+    
+    agent = AgentManager()
+    agent.start()
+        
     ros_node = IntegratedControlNode()
 
     executor = MultiThreadedExecutor()
     executor.add_node(ros_node)
 
+    threading.Thread(target=dashboard_thread, args=(ros_node, dashboard), daemon=True).start()
+
     # 2. ROS 2 Spin & Heartbeat Monitor 스레드 실행
     threading.Thread(target=executor.spin, daemon=True).start()
     threading.Thread(target=heartbeat_monitor, args=(ros_node,), daemon=True).start()
 
+    dashboard = ConsoleDashboard()
+    
     # 3. WebSocket 서버 실행
     async def client_handler(ws: websockets.WebSocketServerProtocol) -> None:
         await handle_client(ws, ros_node)
@@ -295,10 +619,13 @@ async def main():
         except asyncio.CancelledError:
             pass
         finally:
+            print()
+            print("Stopping Race Server...")
             executor.shutdown()
             ros_node.destroy_node()
             rclpy.shutdown()
-
+            agent.stop()
+            print("Bye.")
 
 if __name__ == "__main__":
     try:

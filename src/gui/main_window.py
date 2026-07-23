@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
-from PySide6.QtCore import QEvent, QFile, QIODevice, QTimer, Qt
+from PySide6.QtCore import QEvent, QFile, QIODevice, QSettings, QTimer, Qt
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
     QComboBox,
@@ -23,15 +23,21 @@ from ..core.race_state import RaceState
 
 
 class MainWindow(QMainWindow):
+    WS_SETTINGS_GROUP = "network"
+    WS_HOST_KEY = "race_ws_host"
+    WS_PORT_KEY = "race_ws_port"
+
     def __init__(self, controller: RaceController, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.controller = controller
+        self.settings = QSettings()
         self.summary_labels: Dict[str, QLabel] = {}
         self.status_labels: Dict[str, QLabel] = {}
         self.mission_score_labels: Dict[str, QLabel] = {}
         self._load_ui()
         self._init_round_selector()
         self._wire_actions()
+        self._restore_server_endpoint_from_settings()
 
         self._clock_timer = QTimer(self)
         self._clock_timer.setInterval(1000)
@@ -153,6 +159,11 @@ class MainWindow(QMainWindow):
         self.progress_label = QLabel("진행: -", self)
         self.round_toolbar.addWidget(self.progress_label)
 
+        self.round_toolbar.addSeparator()
+        self.server_button = QPushButton(self._server_button_text(), self)
+        self.server_button.clicked.connect(self._on_server_button_clicked)
+        self.round_toolbar.addWidget(self.server_button)
+
         self._sync_view_mode_selector()
 
     def _on_round_changed(self, index: int) -> None:
@@ -171,6 +182,87 @@ class MainWindow(QMainWindow):
                 self.view_mode_selector.setCurrentIndex(i)
                 self.view_mode_selector.blockSignals(False)
                 return
+
+    def _server_button_text(self) -> str:
+        host, port = self.controller.get_ws_endpoint()
+        return f"서버: {host}:{port}"
+
+    def _on_server_button_clicked(self) -> None:
+        current_host, current_port = self.controller.get_ws_endpoint()
+        host, ok = QInputDialog.getText(
+            self,
+            "서버 주소 설정",
+            "라즈베리파이 IP 또는 호스트:",
+            text=current_host,
+        )
+        if not ok:
+            return
+        target_host = host.strip()
+        if not target_host:
+            QMessageBox.warning(self, "입력 오류", "서버 주소를 입력하세요.")
+            return
+
+        port, ok = QInputDialog.getInt(
+            self,
+            "서버 포트 설정",
+            "WebSocket 포트:",
+            value=int(current_port),
+            minValue=1,
+            maxValue=65535,
+        )
+        if not ok:
+            return
+
+        try:
+            self.controller.reconnect_websocket(target_host, int(port))
+        except ValueError as error:
+            QMessageBox.warning(self, "설정 오류", str(error))
+            return
+
+        self._save_server_endpoint_to_settings(target_host, int(port))
+        self.server_button.setText(self._server_button_text())
+        QMessageBox.information(self, "서버 연결", f"서버를 {target_host}:{port} 로 변경했습니다.")
+
+    def _restore_server_endpoint_from_settings(self) -> None:
+        self.settings.beginGroup(self.WS_SETTINGS_GROUP)
+        try:
+            saved_host = str(self.settings.value(self.WS_HOST_KEY, "") or "").strip()
+            saved_port_raw = self.settings.value(self.WS_PORT_KEY, 0)
+        finally:
+            self.settings.endGroup()
+
+        try:
+            saved_port = int(saved_port_raw)
+        except (TypeError, ValueError):
+            return
+
+        if not saved_host or saved_port < 1 or saved_port > 65535:
+            return
+
+        current_host, current_port = self.controller.get_ws_endpoint()
+        if saved_host == current_host and int(saved_port) == int(current_port):
+            return
+
+        try:
+            self.controller.reconnect_websocket(saved_host, saved_port)
+        except ValueError:
+            return
+
+        self.server_button.setText(self._server_button_text())
+
+    def _save_server_endpoint_to_settings(self, host: str, port: int) -> None:
+        self.settings.beginGroup(self.WS_SETTINGS_GROUP)
+        try:
+            self.settings.setValue(self.WS_HOST_KEY, str(host).strip())
+            self.settings.setValue(self.WS_PORT_KEY, int(port))
+        finally:
+            self.settings.endGroup()
+        self.settings.sync()
+
+    def closeEvent(self, event: QEvent) -> None:  # noqa: N802
+        host, port = self.controller.get_ws_endpoint()
+        self._save_server_endpoint_to_settings(host, int(port))
+        super().closeEvent(event)
 
     def _on_publish_final_clicked(self) -> None:
         preview_text = self._build_final_top3_preview_text()
@@ -247,6 +339,7 @@ class MainWindow(QMainWindow):
 
         team_number = int(current.get("number", 0) or 0)
         self.progress_label.setText(f"진행: {self.controller.get_team_progress_text(team_number)}")
+        self.server_button.setText(self._server_button_text())
 
         mission_scores = state.mission_scores or {}
         for name, label in self.mission_score_labels.items():

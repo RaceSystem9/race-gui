@@ -5,3 +5,4 @@ build/
 *.pyc
 .DS_Store
 race_control.db
+race_results.json

@@ -12,7 +12,7 @@ from .gui.broadcast_window import BroadcastWindow
 from .gui.main_window import MainWindow
 
 
-def build_app(headless: bool = False):
+def build_app(headless: bool = False, ws_host: str | None = None, ws_port: int | None = None):
     app = QApplication(sys.argv)
     app.setApplicationName("RaceControl")
     app.setOrganizationName("RaceManager")
@@ -23,7 +23,12 @@ def build_app(headless: bool = False):
         team_config_path = config_dir / "teams.json"
 
     db_manager = SQLiteManager(config_dir / "race_control.db")
-    controller = RaceController(config_path=team_config_path, database=db_manager)
+    controller = RaceController(
+        config_path=team_config_path,
+        database=db_manager,
+        ws_host=ws_host,
+        ws_port=ws_port,
+    )
 
     operator_window = MainWindow(controller)
     broadcast_window = BroadcastWindow(controller)
@@ -45,9 +50,11 @@ def build_app(headless: bool = False):
 def main() -> None:
     parser = argparse.ArgumentParser(description="RaceControl PySide6 GUI")
     parser.add_argument("--headless", action="store_true", help="Create the UI without showing windows")
+    parser.add_argument("--ws-host", default=None, help="Race WebSocket server host (e.g. Raspberry Pi IP)")
+    parser.add_argument("--ws-port", default=None, type=int, help="Race WebSocket server port")
     args = parser.parse_args()
 
-    app, *_ = build_app(headless=args.headless)
+    app, *_ = build_app(headless=args.headless, ws_host=args.ws_host, ws_port=args.ws_port)
 
     if args.headless:
         app.processEvents()
