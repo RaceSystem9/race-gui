@@ -22,7 +22,10 @@ class RaceState:
     status: str = "IDLE"
     traffic_light: str = "RED"
     elapsed_time: float = 0.0
+    official_elapsed_time: Optional[float] = None
     lap: int = 0
+    lap1_time: Optional[float] = None
+    lap2_time: Optional[float] = None
     best_lap: Optional[float] = None
     rank: Optional[int] = None
     penalty_points: int = 0
@@ -43,7 +46,10 @@ class RaceState:
             "status": self.status,
             "traffic_light": self.traffic_light,
             "elapsed_time": self.elapsed_time,
+            "official_elapsed_time": self.official_elapsed_time,
             "lap": self.lap,
+            "lap1_time": self.lap1_time,
+            "lap2_time": self.lap2_time,
             "best_lap": self.best_lap,
             "rank": self.rank,
             "penalty_points": self.penalty_points,

@@ -74,6 +74,8 @@ class MainWindow(QMainWindow):
         self.next_next_team_label = self._required_label("lblNextNextTeam")
         self.clock_label = self._required_label("lblClock")
         self.timer_display = self._required_label("lblTimerDisplay")
+        self.lap1_timer_small_label = self._required_label("lblLap1TimerSmall")
+        self.lap2_timer_small_label = self._required_label("lblLap2TimerSmall")
         self.log_list = self._required_list("listLog")
 
         self.summary_labels = {
@@ -89,8 +91,8 @@ class MainWindow(QMainWindow):
         self.status_labels = {
             "traffic_light_1": self._required_label("statusTrafficLight1"),
             "traffic_light_2": self._required_label("statusTrafficLight2"),
-            "gate": self._required_label("statusGate"),
-            "wifi": self._required_label("statusWifi"),
+            "gate1": self._required_label("statusGate1"),
+            "gate2": self._required_label("statusGate2"),
             "ros2": self._required_label("statusRos2"),
             "win_gui": self._required_label("statusWinGui"),
             "broadcast": self._required_label("statusBroadcast"),
@@ -116,7 +118,7 @@ class MainWindow(QMainWindow):
             "btnNext": self.controller.next_team,
             "btnRetry": self.controller.retry,
             "btnDisqualify": self.controller.disqualify,
-            "btnEmergency": self.controller.emergency,
+            "btnCheckDevice": self._on_refresh_status_clicked,
         }
         for object_name, callback in button_specs.items():
             self._required_button(object_name).clicked.connect(callback)
@@ -259,6 +261,9 @@ class MainWindow(QMainWindow):
             self.settings.endGroup()
         self.settings.sync()
 
+    def _on_refresh_status_clicked(self) -> None:
+        self.controller.request_pi_status()
+
     def closeEvent(self, event: QEvent) -> None:  # noqa: N802
         host, port = self.controller.get_ws_endpoint()
         self._save_server_endpoint_to_settings(host, int(port))
@@ -332,10 +337,17 @@ class MainWindow(QMainWindow):
         self.summary_labels["light"].setText(state.traffic_light)
         summary_time = state.final_time if state.final_time is not None else state.elapsed_time
         self.summary_labels["time"].setText(f"{summary_time:.2f}")
-        self.summary_labels["lap"].setText(str(state.lap))
+        current_lap = max(0, int(state.lap or 0))
+        self.summary_labels["lap"].setText(f"{current_lap}/{self.controller.MAX_LAPS}")
         self.summary_labels["best"].setText(f"{state.best_lap:.2f}" if state.best_lap is not None else "-")
         self.summary_labels["rank"].setText(str(state.rank) if state.rank is not None else "-")
         self.timer_display.setText(f"{summary_time:05.2f}")
+        self.lap1_timer_small_label.setText(
+            f"Lap1: {state.lap1_time:05.2f}" if state.lap1_time is not None else "Lap1: -"
+        )
+        self.lap2_timer_small_label.setText(
+            f"Lap2: {state.lap2_time:05.2f}" if state.lap2_time is not None else "Lap2: -"
+        )
 
         team_number = int(current.get("number", 0) or 0)
         self.progress_label.setText(f"진행: {self.controller.get_team_progress_text(team_number)}")

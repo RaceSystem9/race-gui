@@ -63,6 +63,8 @@ class BroadcastWindow(QMainWindow):
         self.school_label = self._required_label("lblSchool")
         self.school_logo_label = self._required_label("lblSchoolLogo")
         self.time_label = self._required_label("lblTime")
+        self.lap1_time_label = self._required_label("lblLap1Time")
+        self.lap2_time_label = self._required_label("lblLap2Time")
         self.state_label = self.findChild(QLabel, "lblState")
         self.info_label = self._required_label("lblInfo")
         self.rank_round_label = self._required_label("lblRankRound")
@@ -100,6 +102,15 @@ class BroadcastWindow(QMainWindow):
         team_number = int(current.get("number", 0) or 0)
         team_name = current.get("team_name", "N/A")
         school_name = current.get("school", "N/A")
+        # Keep the main broadcast clock running while race is active.
+        if state.status == "FINISHED":
+            race_elapsed = (
+                state.final_time
+                if state.final_time is not None
+                else (state.official_elapsed_time if state.official_elapsed_time is not None else state.elapsed_time)
+            )
+        else:
+            race_elapsed = state.elapsed_time
 
         self.team_label.setText(current.get("team_name", "N/A"))
         self.team2_label.setText(self.team_label.text())
@@ -107,16 +118,18 @@ class BroadcastWindow(QMainWindow):
         self.rank_round_label.setText("(1차 오전)" if self.controller.current_round == 1 else "(2차 오후)")
         self.team_no_label.setText(str(team_number))
         self.school_label.setText(school_name)
-        self.time_label.setText(f"{state.elapsed_time:05.2f}")
+        self.time_label.setText(f"{race_elapsed:05.2f}")
         if self.state_label is not None:
             self.state_label.setText(state.status)
         self._refresh_school_logo(team_number)
         self._refresh_member_info(current)
+        self.lap1_time_label.setText(f"LAP1  {state.lap1_time:05.2f}" if state.lap1_time is not None else "LAP1  -")
+        self.lap2_time_label.setText(f"LAP2  {state.lap2_time:05.2f}" if state.lap2_time is not None else "LAP2  -")
 
         mission_total_seconds = self._refresh_mission_scores(state)
         self.mission_total_label.setText(f"{mission_total_seconds:.2f}")
-        self.racing_score_label.setText(f"{state.elapsed_time:05.2f}")
-        total_score = state.final_time if state.final_time is not None else round(state.elapsed_time + mission_total_seconds, 2)
+        self.racing_score_label.setText(f"{race_elapsed:05.2f}")
+        total_score = state.final_time if state.final_time is not None else round(race_elapsed + mission_total_seconds, 2)
         self.total_score_label.setText(f"{total_score:05.2f}")
 
         rank_text = str(state.rank) if state.rank is not None else "-"

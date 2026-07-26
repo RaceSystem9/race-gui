@@ -39,6 +39,38 @@
      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
     </property>
    </widget>
+   <widget class="QLabel" name="lblLap1TimerSmall">
+    <property name="geometry">
+     <rect>
+      <x>450</x>
+      <y>320</y>
+      <width>300</width>
+      <height>40</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">font-size: 24px; font-weight: bold; color: rgb(0, 70, 160);</string>
+    </property>
+    <property name="text">
+     <string>Lap1: -</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="lblLap2TimerSmall">
+    <property name="geometry">
+     <rect>
+      <x>770</x>
+      <y>320</y>
+      <width>300</width>
+      <height>40</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">font-size: 24px; font-weight: bold; color: rgb(0, 70, 160);</string>
+    </property>
+    <property name="text">
+     <string>Lap2: -</string>
+    </property>
+   </widget>
    <widget class="QListWidget" name="listLog">
     <property name="geometry">
      <rect>
@@ -394,6 +426,48 @@
     </property>
     <layout class="QHBoxLayout" name="buttonsLayout">
      <item>
+      <widget class="QPushButton" name="btnCheckDevice">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>24</pointsize>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">/* 기본 상태 */
+QPushButton {
+    border: 1px solid #a0a0a0;
+    border-radius: 4px;
+    background-color: #f5f5f5;
+}
+
+/* 마우스를 올렸을 때 (Hover) */
+QPushButton:hover {
+    border: 1px solid #3498db; /* 테두리를 파란색으로 변경 */
+    background-color: #e8f4fc; /* 배경색도 살짝 밝은 파란빛으로 변경 */
+}
+
+/* 버튼을 클릭하고 있을 때 (Pressed) */
+QPushButton:pressed {
+    border: 1px solid #2980b9; /* 진한 파란색 테두리 */
+    background-color: #d4e6f1; /* 조금 더 어두운 배경색 */
+}
+</string>
+       </property>
+       <property name="text">
+        <string>장비체크</string>
+       </property>
+       <property name="flat">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btnStart">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -687,48 +761,6 @@ QPushButton:pressed {
        </property>
       </widget>
      </item>
-     <item>
-      <widget class="QPushButton" name="btnEmergency">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>24</pointsize>
-        </font>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">/* 기본 상태 */
-QPushButton {
-    border: 1px solid #a0a0a0;
-    border-radius: 4px;
-    background-color: #f5f5f5;
-}
-
-/* 마우스를 올렸을 때 (Hover) */
-QPushButton:hover {
-    border: 1px solid #3498db; /* 테두리를 파란색으로 변경 */
-    background-color: #e8f4fc; /* 배경색도 살짝 밝은 파란빛으로 변경 */
-}
-
-/* 버튼을 클릭하고 있을 때 (Pressed) */
-QPushButton:pressed {
-    border: 1px solid #2980b9; /* 진한 파란색 테두리 */
-    background-color: #d4e6f1; /* 조금 더 어두운 배경색 */
-}
-</string>
-       </property>
-       <property name="text">
-        <string> 일단정지 </string>
-       </property>
-       <property name="flat">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
     </layout>
    </widget>
    <widget class="QWidget" name="layoutWidget">
@@ -780,7 +812,7 @@ QPushButton:pressed {
       </widget>
      </item>
      <item row="0" column="2">
-      <widget class="QLabel" name="labelGate">
+      <widget class="QLabel" name="labelGate1">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -796,7 +828,7 @@ QPushButton:pressed {
         <bool>false</bool>
        </property>
        <property name="text">
-        <string>통과감지장치</string>
+        <string>통과감지1</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -804,7 +836,7 @@ QPushButton:pressed {
       </widget>
      </item>
      <item row="2" column="3">
-      <widget class="QLabel" name="statusWifi">
+      <widget class="QLabel" name="statusGate2">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -909,7 +941,7 @@ QPushButton:pressed {
       </widget>
      </item>
      <item row="0" column="3">
-      <widget class="QLabel" name="labelWifi">
+      <widget class="QLabel" name="labelGate2">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -925,7 +957,7 @@ QPushButton:pressed {
         <bool>false</bool>
        </property>
        <property name="text">
-        <string>WiFi</string>
+        <string>통과감지2</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -1081,7 +1113,7 @@ QPushButton:pressed {
       </widget>
      </item>
      <item row="2" column="2">
-      <widget class="QLabel" name="statusGate">
+      <widget class="QLabel" name="statusGate1">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -1171,7 +1203,7 @@ QPushButton:pressed {
     <property name="geometry">
      <rect>
       <x>440</x>
-      <y>360</y>
+      <y>370</y>
       <width>631</width>
       <height>71</height>
      </rect>

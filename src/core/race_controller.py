@@ -26,6 +26,9 @@ class RaceController(QObject):
     VIEW_MODE_ROUND1 = "ROUND1"
     VIEW_MODE_ROUND2 = "ROUND2"
     VIEW_MODE_FINAL = "FINAL"
+    MAX_LAPS = 3
+    MIN_LAP_INTERVAL_SECONDS = 10.0
+    PI_STATUS_STALE_SECONDS = 15.0
 
     def __init__(
         self,
@@ -41,6 +44,7 @@ class RaceController(QObject):
         self.websocket_client = WebSocketClient(host=ws_host, port=ws_port)
         self.websocket_client.connection_changed.connect(self._on_connection_changed)
         self.websocket_client.ack_status_changed.connect(self._on_ack_status_changed)
+        self.websocket_client.message_received.connect(self._on_websocket_message)
         self.websocket_client.connect()
         self._last_sent_traffic_light: Optional[str] = None
 
@@ -57,10 +61,15 @@ class RaceController(QObject):
         latest_snapshot = self.database.get_latest_final_snapshot()
         self.final_snapshot_id = int(latest_snapshot["id"]) if latest_snapshot else None
         self._run_finalized = False
+        self._official_timer_base_ms: Optional[float] = None
+        self._pi_status_available = False
+        self._pi_connected_count = 0
+        self._pi_devices: List[Dict[str, Any]] = []
+        self._pi_status_last_received_at = 0.0
         self._assign_teams()
 
         self.timer = QTimer(self)
-        self.timer.setInterval(100)
+        self.timer.setInterval(10)
         self.timer.timeout.connect(self._tick)
 
         self.countdown_timer = QTimer(self)
@@ -125,7 +134,11 @@ class RaceController(QObject):
         self.state.countdown = 3
         self.state.timer_running = False
         self.state.elapsed_time = 0.0
-        self.state.lap = 1
+        self.state.official_elapsed_time = None
+        self._official_timer_base_ms = None
+        self.state.lap = 0
+        self.state.lap1_time = None
+        self.state.lap2_time = None
         self.state.mission_scores = self._default_mission_scores()
         self.state.mission_penalty_seconds = 0.0
         self.state.final_time = None
@@ -169,7 +182,11 @@ class RaceController(QObject):
         self.countdown_timer.stop()
         self.state.timer_running = False
         self.state.elapsed_time = 0.0
+        self.state.official_elapsed_time = None
+        self._official_timer_base_ms = None
         self.state.lap = 0
+        self.state.lap1_time = None
+        self.state.lap2_time = None
         self.state.status = "IDLE"
         self.state.traffic_light = "RED"
         self.state.best_lap = None
@@ -191,7 +208,11 @@ class RaceController(QObject):
         self.state.status = "READY"
         self.state.traffic_light = "RED"
         self.state.elapsed_time = 0.0
+        self.state.official_elapsed_time = None
+        self._official_timer_base_ms = None
         self.state.lap = 0
+        self.state.lap1_time = None
+        self.state.lap2_time = None
         self.state.best_lap = None
         self.state.rank = None
         self.state.penalty_points = 0
@@ -207,7 +228,11 @@ class RaceController(QObject):
         self.timer.stop()
         self.countdown_timer.stop()
         self.state.elapsed_time = 0.0
+        self.state.official_elapsed_time = None
+        self._official_timer_base_ms = None
         self.state.lap = 0
+        self.state.lap1_time = None
+        self.state.lap2_time = None
         self.state.status = "READY"
         self.state.traffic_light = "RED"
         self.state.timer_running = False
@@ -251,7 +276,7 @@ class RaceController(QObject):
 
     def _tick(self) -> None:
         if self.state.timer_running:
-            self.state.elapsed_time = round(self.state.elapsed_time + 0.1, 2)
+            self.state.elapsed_time = round(self.state.elapsed_time + 0.01, 2)
             self._emit_state()
 
     def _record(self, message: str) -> None:
@@ -278,13 +303,161 @@ class RaceController(QObject):
             self._last_sent_traffic_light = None
             self.websocket_client.send_state(self.state.snapshot())
             self._sync_traffic_light_command()
+            self.request_pi_status()
         self.state_changed.emit(self.state)
 
     def _on_ack_status_changed(self, _ok: bool) -> None:
         self.state_changed.emit(self.state)
 
+    def _on_websocket_message(self, message: Dict[str, Any]) -> None:
+        message_type = str(message.get("type", "")).lower()
+        payload = message.get("payload", {})
+        if not isinstance(payload, dict):
+            return
+
+        if message_type == "status_response":
+            self._apply_pi_status_payload(payload)
+            self.state_changed.emit(self.state)
+            return
+
+        changed = self._try_apply_authoritative_elapsed(payload)
+
+        if message_type == "gate_trigger":
+            # Gate trigger timestamps come from Raspberry Pi/ROS device timing.
+            detected = bool(payload.get("detected", False))
+            timestamp_ms = payload.get("timestamp")
+            if detected and self.state.status == "RUNNING" and self.state.timer_running:
+                lap_index_raw = payload.get("lap_index")
+                lap_elapsed_raw = payload.get("lap_elapsed_time")
+
+                if lap_index_raw is not None and lap_elapsed_raw is not None:
+                    try:
+                        lap_index = int(lap_index_raw)
+                        lap_elapsed = round(float(lap_elapsed_raw), 2)
+                    except (TypeError, ValueError):
+                        lap_index = 0
+                        lap_elapsed = 0.0
+
+                    if 1 <= lap_index <= self.MAX_LAPS:
+                        if not self._is_lap_interval_valid(lap_elapsed):
+                            return
+                        self.state.lap = lap_index
+                        self.state.official_elapsed_time = lap_elapsed
+                        changed = True
+                        if lap_index == 1:
+                            self.state.lap1_time = lap_elapsed
+                        elif lap_index == 2:
+                            self.state.lap2_time = lap_elapsed
+                else:
+                    # Fallback when server is old and does not send lap metadata.
+                    if timestamp_ms is not None:
+                        changed = self._set_official_elapsed_from_gate_timestamp(timestamp_ms) or changed
+
+                    race_elapsed = self.state.official_elapsed_time
+                    if race_elapsed is None:
+                        race_elapsed = self.state.elapsed_time
+                    race_elapsed = round(float(race_elapsed), 2)
+
+                    if not self._is_lap_interval_valid(race_elapsed):
+                        return
+
+                    self.state.lap = min(self.MAX_LAPS, int(self.state.lap) + 1)
+                    changed = True
+
+                    if self.state.lap == 1:
+                        self.state.lap1_time = race_elapsed
+                    elif self.state.lap == 2:
+                        self.state.lap2_time = race_elapsed
+
+                if self.state.lap >= self.MAX_LAPS:
+                    self._auto_stop_after_last_lap()
+                    return
+
+        if changed and (self.state.timer_running or self.state.status == "FINISHED"):
+            self.state_changed.emit(self.state)
+
+    def _is_lap_interval_valid(self, candidate_elapsed: float) -> bool:
+        previous_lap_time = self.state.lap2_time if self.state.lap2_time is not None else self.state.lap1_time
+        if previous_lap_time is None:
+            return True
+        return (float(candidate_elapsed) - float(previous_lap_time)) >= self.MIN_LAP_INTERVAL_SECONDS
+
+    def _auto_stop_after_last_lap(self) -> None:
+        self.timer.stop()
+        self.countdown_timer.stop()
+        self.state.timer_running = False
+        self.state.status = "FINISHED"
+        self.state.traffic_light = "YELLOW"
+        self._finalize_current_run()
+        self.leaderboard_changed.emit()
+        self._record("AUTO STOP: reached 3rd trigger")
+        self._emit_state()
+
+    def _try_apply_authoritative_elapsed(self, payload: Dict[str, Any]) -> bool:
+        # Support multiple payload schemas to stay compatible with server-side evolution.
+        keys_seconds = ("official_elapsed_time", "elapsed_time", "race_time", "timer_seconds")
+        for key in keys_seconds:
+            value = payload.get(key)
+            if value is None:
+                continue
+            try:
+                seconds = round(float(value), 2)
+            except (TypeError, ValueError):
+                continue
+            if seconds < 0:
+                continue
+            if self.state.official_elapsed_time != seconds:
+                self.state.official_elapsed_time = seconds
+                return True
+            return False
+
+        keys_millis = ("official_elapsed_ms", "elapsed_ms", "timer_ms")
+        for key in keys_millis:
+            value = payload.get(key)
+            if value is None:
+                continue
+            return self._set_official_elapsed_from_ms(value)
+
+        return False
+
+    def _set_official_elapsed_from_ms(self, value: Any) -> bool:
+        try:
+            seconds = round(float(value) / 1000.0, 2)
+        except (TypeError, ValueError):
+            return False
+        if seconds < 0:
+            return False
+        if self.state.official_elapsed_time == seconds:
+            return False
+        self.state.official_elapsed_time = seconds
+        return True
+
+    def _set_official_elapsed_from_gate_timestamp(self, value: Any) -> bool:
+        try:
+            timestamp_ms = float(value)
+        except (TypeError, ValueError):
+            return False
+
+        if timestamp_ms < 0:
+            return False
+
+        if self._official_timer_base_ms is None:
+            self._official_timer_base_ms = timestamp_ms
+            elapsed_seconds = 0.0
+        else:
+            elapsed_seconds = max(0.0, (timestamp_ms - self._official_timer_base_ms) / 1000.0)
+
+        elapsed_seconds = round(elapsed_seconds, 2)
+        if self.state.official_elapsed_time == elapsed_seconds:
+            return False
+        self.state.official_elapsed_time = elapsed_seconds
+        return True
+
     def get_ws_endpoint(self) -> tuple[str, int]:
         return self.websocket_client.host, int(self.websocket_client.port)
+
+    def request_pi_status(self) -> None:
+        self.websocket_client.send_command("status_request", {})
 
     def reconnect_websocket(self, host: str, port: int) -> None:
         target_host = str(host).strip()
@@ -304,33 +477,82 @@ class RaceController(QObject):
     def get_status_badges(self) -> Dict[str, str]:
         connected = self.websocket_client.is_connected
         ack_state = self.websocket_client.ack_state
+        device_healthy = connected and ack_state == "ok"
+        pi_status_fresh = self._pi_status_available and (
+            (time.time() - self._pi_status_last_received_at) <= self.PI_STATUS_STALE_SECONDS
+        )
+
+        tl1_connected = False
+        tl2_connected = False
+        gate1_connected = False
+        gate2_connected = False
+        if self._pi_status_available:
+            tl1_connected = any(
+                int(d.get("device_id", 0)) >= 200
+                and int(d.get("sensor_id", 0)) == 1
+                and bool(d.get("connected", False))
+                for d in self._pi_devices
+            )
+            tl2_connected = any(
+                int(d.get("device_id", 0)) >= 200
+                and int(d.get("sensor_id", 0)) == 2
+                and bool(d.get("connected", False))
+                for d in self._pi_devices
+            )
+            gate1_connected = any(
+                100 <= int(d.get("device_id", 0)) < 200
+                and int(d.get("sensor_id", 0)) == 1
+                and bool(d.get("connected", False))
+                for d in self._pi_devices
+            )
+            gate2_connected = any(
+                100 <= int(d.get("device_id", 0)) < 200
+                and int(d.get("sensor_id", 0)) == 2
+                and bool(d.get("connected", False))
+                for d in self._pi_devices
+            )
+        else:
+            tl1_connected = device_healthy
+            tl2_connected = device_healthy
+            gate1_connected = device_healthy
+            gate2_connected = device_healthy
 
         if not connected:
             wifi_badge = "🔴 OFF"
             ros2_badge = "🔴 OFF"
-        elif ack_state == "ok":
+        elif pi_status_fresh:
             wifi_badge = "🟢 OK"
             ros2_badge = "🟢 OK"
         elif ack_state == "pending":
             wifi_badge = "🟡 WAIT"
             ros2_badge = "🟡 WAIT"
-        elif ack_state == "failed":
+        elif self._pi_status_available:
+            # Status responses have arrived before, but are currently stale.
             wifi_badge = "🟡 WARN"
-            ros2_badge = "🔴 OFF"
+            ros2_badge = "🟡 WAIT"
         else:
             wifi_badge = "🟢 OK"
             ros2_badge = "🟡 READY"
 
         return {
-            "traffic_light_1": "🟢 OK" if connected else "🔴 OFF",
-            "traffic_light_2": "🟢 OK" if connected else "🔴 OFF",
-            "gate": "🟢 OK" if connected else "🔴 OFF",
-            "wifi": wifi_badge,
+            "traffic_light_1": "🟢 OK" if tl1_connected else "🔴 OFF",
+            "traffic_light_2": "🟢 OK" if tl2_connected else "🔴 OFF",
+            "gate1": "🟢 OK" if gate1_connected else "🔴 OFF",
+            "gate2": "🟢 OK" if gate2_connected else "🔴 OFF",
             "ros2": ros2_badge,
             "win_gui": "🟢 OK",
             "broadcast": "🟢 OK",
             "database": self.database.status_text(),
         }
+
+    def _apply_pi_status_payload(self, payload: Dict[str, Any]) -> None:
+        devices = payload.get("devices", [])
+        if not isinstance(devices, list):
+            devices = []
+        self._pi_devices = [d for d in devices if isinstance(d, dict)]
+        self._pi_connected_count = int(payload.get("connected_count", 0) or 0)
+        self._pi_status_available = True
+        self._pi_status_last_received_at = time.time()
 
     def get_round_leaderboard(self, limit: int = 22) -> List[Dict[str, Any]]:
         return self.database.get_leaderboard(limit=limit, round_no=self.current_round)
@@ -432,12 +654,16 @@ class RaceController(QObject):
         if self._run_finalized and not force_update:
             return
 
+        race_elapsed = self.state.official_elapsed_time
+        if race_elapsed is None:
+            race_elapsed = self.state.elapsed_time
+
         self.state.mission_penalty_seconds = self._mission_penalty_seconds()
         if self.state.disqualified:
             self.state.final_time = None
             self.state.rank = None
         else:
-            self.state.final_time = round(self.state.elapsed_time + self.state.mission_penalty_seconds, 2)
+            self.state.final_time = round(race_elapsed + self.state.mission_penalty_seconds, 2)
 
         current = self.state.current_team or {}
         result = {
@@ -445,7 +671,7 @@ class RaceController(QObject):
             "team_number": int(current.get("number", 0) or 0),
             "team_name": str(current.get("team_name", "N/A")),
             "school": str(current.get("school", "N/A")),
-            "elapsed_time": float(self.state.elapsed_time),
+            "elapsed_time": float(race_elapsed),
             "mission_penalty_seconds": float(self.state.mission_penalty_seconds),
             "manual_penalty_points": int(self.state.penalty_points),
             "final_time": self.state.final_time,
