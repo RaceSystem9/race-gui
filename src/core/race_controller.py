@@ -27,11 +27,18 @@ class RaceController(QObject):
     VIEW_MODE_ROUND2 = "ROUND2"
     VIEW_MODE_FINAL = "FINAL"
 
-    def __init__(self, config_path: Optional[Path] = None, database: Optional[SQLiteManager] = None, parent: Optional[QObject] = None) -> None:
+    def __init__(
+        self,
+        config_path: Optional[Path] = None,
+        database: Optional[SQLiteManager] = None,
+        ws_host: Optional[str] = None,
+        ws_port: Optional[int] = None,
+        parent: Optional[QObject] = None,
+    ) -> None:
         super().__init__(parent)
         self.state = RaceState()
         self.database = database or SQLiteManager()
-        self.websocket_client = WebSocketClient()
+        self.websocket_client = WebSocketClient(host=ws_host, port=ws_port)
         self.websocket_client.connection_changed.connect(self._on_connection_changed)
         self.websocket_client.ack_status_changed.connect(self._on_ack_status_changed)
         self.websocket_client.connect()
@@ -275,6 +282,24 @@ class RaceController(QObject):
 
     def _on_ack_status_changed(self, _ok: bool) -> None:
         self.state_changed.emit(self.state)
+
+    def get_ws_endpoint(self) -> tuple[str, int]:
+        return self.websocket_client.host, int(self.websocket_client.port)
+
+    def reconnect_websocket(self, host: str, port: int) -> None:
+        target_host = str(host).strip()
+        target_port = int(port)
+        if not target_host:
+            raise ValueError("WebSocket host cannot be empty")
+        if target_port < 1 or target_port > 65535:
+            raise ValueError("WebSocket port must be between 1 and 65535")
+
+        self.websocket_client.disconnect()
+        self.websocket_client.set_endpoint(target_host, target_port)
+        self.websocket_client.connect()
+        self._last_sent_traffic_light = None
+        self._record(f"WebSocket endpoint changed to {target_host}:{target_port}")
+        self._emit_state()
 
     def get_status_badges(self) -> Dict[str, str]:
         connected = self.websocket_client.is_connected
