@@ -1,6 +1,7 @@
 [
     {
         "team_no": 1,
+        "giveup": 0,
         "team_name": "321고",
         "school": "순천향대학교",
         "num_of_members": 3,
@@ -27,6 +28,7 @@
     },
     {
         "team_no": 2,
+        "giveup": 0,
         "team_name": "ACCA",
         "school": "숭실대학교",
         "num_of_members": 4,
@@ -59,6 +61,7 @@
     },
     {
         "team_no": 3,
+        "giveup": 0,
         "team_name": "DuDu",
         "school": "동국대학교",
         "num_of_members": 4,
@@ -91,6 +94,7 @@
     },
     {
         "team_no": 4,
+        "giveup": 0,
         "team_name": "E-ON",
         "school": "경희대학교",
         "num_of_members": 5,
@@ -129,6 +133,7 @@
     },
     {
         "team_no": 5,
+        "giveup": 0,
         "team_name": "ERI-CAR",
         "school": "한양대학교 ERICA",
         "num_of_members": 5,
@@ -167,6 +172,7 @@
     },
     {
         "team_no": 6,
+        "giveup": 1,
         "team_name": "iCar",
         "school": "국민대학교",
         "num_of_members": 3,
@@ -193,6 +199,7 @@
     },
     {
         "team_no": 7,
+        "giveup": 0,
         "team_name": "KHUSLA",
         "school": "경희대학교",
         "num_of_members": 5,
@@ -231,6 +238,7 @@
     },
     {
         "team_no": 8,
+        "giveup": 0,
         "team_name": "KOBOT",
         "school": "국민대학교",
         "num_of_members": 4,
@@ -263,6 +271,7 @@
     },
     {
         "team_no": 9,
+        "giveup": 0,
         "team_name": "KURiver",
         "school": "국민대학교",
         "num_of_members": 4,
@@ -295,6 +304,7 @@
     },
     {
         "team_no": 10,
+        "giveup": 0,
         "team_name": "MECar",
         "school": "연세대학교",
         "num_of_members": 4,
@@ -327,6 +337,7 @@
     },
     {
         "team_no": 11,
+        "giveup": 0,
         "team_name": "Team SVE",
         "school": "건국대학교",
         "num_of_members": 5,
@@ -365,6 +376,7 @@
     },
     {
         "team_no": 12,
+        "giveup": 0,
         "team_name": "TENSOR",
         "school": "충북대학교",
         "num_of_members": 5,
@@ -403,6 +415,7 @@
     },
     {
         "team_no": 13,
+        "giveup": 0,
         "team_name": "돌렉트로니카",
         "school": "경희대학교",
         "num_of_members": 5,
@@ -441,6 +454,7 @@
     },
     {
         "team_no": 14,
+        "giveup": 0,
         "team_name": "돌쇠3군",
         "school": "경희대학교",
         "num_of_members": 5,
@@ -479,6 +493,7 @@
     },
     {
         "team_no": 15,
+        "giveup": 0,
         "team_name": "마리오카트",
         "school": "국민대학교",
         "num_of_members": 4,
@@ -511,6 +526,7 @@
     },
     {
         "team_no": 16,
+        "giveup": 0,
         "team_name": "비틀비틀",
         "school": "경북대학교",
         "num_of_members": 3,
@@ -537,6 +553,7 @@
     },
     {
         "team_no": 17,
+        "giveup": 0,
         "team_name": "빅딜",
         "school": "동국대학교",
         "num_of_members": 5,
@@ -575,6 +592,7 @@
     },
     {
         "team_no": 18,
+        "giveup": 0,
         "team_name": "아주숭한 INFO",
         "school": "아주대,숭실대,한양대",
         "num_of_members": 4,
@@ -607,6 +625,7 @@
     },
     {
         "team_no": 19,
+        "giveup": 0,
         "team_name": "알파카",
         "school": "항공대,인하대,청운대",
         "num_of_members": 3,
@@ -633,6 +652,7 @@
     },
     {
         "team_no": 20,
+        "giveup": 0,
         "team_name": "율붕붕",
         "school": "성균관대학교",
         "num_of_members": 5,
@@ -671,6 +691,7 @@
     },
     {
         "team_no": 21,
+        "giveup": 1,
         "team_name": "토마스와 친구들",
         "school": "아주대학교",
         "num_of_members": 5,
@@ -709,6 +730,7 @@
     },
     {
         "team_no": 22,
+        "giveup": 0,
         "team_name": "팀 카이",
         "school": "건국대학교",
         "num_of_members": 5,

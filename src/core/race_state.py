@@ -26,6 +26,7 @@ class RaceState:
     lap: int = 0
     lap1_time: Optional[float] = None
     lap2_time: Optional[float] = None
+    lap3_time: Optional[float] = None
     best_lap: Optional[float] = None
     rank: Optional[int] = None
     penalty_points: int = 0
@@ -50,6 +51,7 @@ class RaceState:
             "lap": self.lap,
             "lap1_time": self.lap1_time,
             "lap2_time": self.lap2_time,
+            "lap3_time": self.lap3_time,
             "best_lap": self.best_lap,
             "rank": self.rank,
             "penalty_points": self.penalty_points,

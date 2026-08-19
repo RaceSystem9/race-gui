@@ -31,6 +31,9 @@ def _row_to_result(row: sqlite3.Row) -> Dict[str, Any]:
         "final_time": None if final_time is None else float(final_time),
         "disqualified": bool(row["disqualified"]),
         "mission_scores": mission_scores,
+        "lap1_time": None if row["lap1_time"] is None else float(row["lap1_time"]),
+        "lap2_time": None if row["lap2_time"] is None else float(row["lap2_time"]),
+        "lap3_time": None if row["lap3_time"] is None else float(row["lap3_time"]),
     }
 
 
@@ -51,7 +54,8 @@ def sync_db_to_json(db_path: Path, json_path: Path, backup: bool = True) -> int:
             """
             SELECT created_at, round_no, team_number, team_name, school,
                    elapsed_time, mission_penalty_seconds, manual_penalty_points,
-                   final_time, disqualified, mission_scores_json
+                   final_time, disqualified, mission_scores_json,
+                   lap1_time, lap2_time, lap3_time
             FROM race_results
             ORDER BY id ASC
             """

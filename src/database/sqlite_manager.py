@@ -30,7 +30,10 @@ class SQLiteManager:
                 manual_penalty_points INTEGER NOT NULL,
                 final_time REAL,
                 disqualified INTEGER NOT NULL,
-                mission_scores_json TEXT NOT NULL
+                mission_scores_json TEXT NOT NULL,
+                lap1_time REAL,
+                lap2_time REAL,
+                lap3_time REAL
             )
             """
         )
@@ -51,6 +54,9 @@ class SQLiteManager:
         column_names = {str(row[1]) for row in columns}
         if "round_no" not in column_names:
             self.connection.execute("ALTER TABLE race_results ADD COLUMN round_no INTEGER NOT NULL DEFAULT 1")
+        for lap_column in ("lap1_time", "lap2_time", "lap3_time"):
+            if lap_column not in column_names:
+                self.connection.execute(f"ALTER TABLE race_results ADD COLUMN {lap_column} REAL")
 
     def append_event(self, message: str) -> int:
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -85,7 +91,10 @@ class SQLiteManager:
                 manual_penalty_points = ?,
                 final_time = ?,
                 disqualified = ?,
-                mission_scores_json = ?
+                mission_scores_json = ?,
+                lap1_time = ?,
+                lap2_time = ?,
+                lap3_time = ?
             WHERE team_number = ? AND round_no = ?
             """,
             (
@@ -98,6 +107,9 @@ class SQLiteManager:
                 None if result.get("final_time") is None else float(result.get("final_time")),
                 1 if result.get("disqualified", False) else 0,
                 mission_scores_json,
+                None if result.get("lap1_time") is None else float(result.get("lap1_time")),
+                None if result.get("lap2_time") is None else float(result.get("lap2_time")),
+                None if result.get("lap3_time") is None else float(result.get("lap3_time")),
                 team_number,
                 round_no,
             ),
@@ -123,9 +135,12 @@ class SQLiteManager:
                     manual_penalty_points,
                     final_time,
                     disqualified,
-                    mission_scores_json
+                    mission_scores_json,
+                    lap1_time,
+                    lap2_time,
+                    lap3_time
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     timestamp,
@@ -139,6 +154,9 @@ class SQLiteManager:
                     None if result.get("final_time") is None else float(result.get("final_time")),
                     1 if result.get("disqualified", False) else 0,
                     mission_scores_json,
+                    None if result.get("lap1_time") is None else float(result.get("lap1_time")),
+                    None if result.get("lap2_time") is None else float(result.get("lap2_time")),
+                    None if result.get("lap3_time") is None else float(result.get("lap3_time")),
                 ),
             )
             saved_id = int(cursor.lastrowid)
@@ -168,6 +186,29 @@ class SQLiteManager:
 
         return saved_id
 
+    def delete_race_result(self, team_number: int, round_no: int) -> None:
+        self.connection.execute(
+            "DELETE FROM race_results WHERE team_number = ? AND round_no = ?",
+            (int(team_number), int(round_no)),
+        )
+        self.connection.commit()
+
+        archive_path = self.db_path.with_name("race_results.json")
+        if not archive_path.exists():
+            return
+        with archive_path.open("r", encoding="utf-8") as handle:
+            archive = json.load(handle)
+        if not isinstance(archive, list):
+            return
+        remaining = [
+            item
+            for item in archive
+            if not (int(item.get("team_number", 0) or 0) == int(team_number) and int(item.get("round_no", 1) or 1) == int(round_no))
+        ]
+        if len(remaining) != len(archive):
+            with archive_path.open("w", encoding="utf-8") as handle:
+                json.dump(remaining, handle, ensure_ascii=False, indent=2)
+
     def rank_for_time(self, final_time: float, round_no: Optional[int] = None) -> int:
         if round_no is None:
             row = self.connection.execute(
@@ -176,6 +217,7 @@ class SQLiteManager:
                 FROM race_results
                 WHERE disqualified = 0
                   AND final_time IS NOT NULL
+                  AND final_time > 0
                   AND final_time < ?
                 """,
                 (float(final_time),),
@@ -187,6 +229,7 @@ class SQLiteManager:
                 FROM race_results
                 WHERE disqualified = 0
                   AND final_time IS NOT NULL
+                  AND final_time > 0
                   AND round_no = ?
                   AND final_time < ?
                 """,
@@ -200,7 +243,7 @@ class SQLiteManager:
                 """
                 SELECT id, created_at, round_no, team_number, team_name, school, elapsed_time,
                        mission_penalty_seconds, manual_penalty_points, final_time,
-                       disqualified, mission_scores_json
+                       disqualified, mission_scores_json, lap1_time, lap2_time, lap3_time
                 FROM race_results
                 WHERE team_number = ?
                 ORDER BY id DESC
@@ -213,7 +256,7 @@ class SQLiteManager:
                 """
                 SELECT id, created_at, round_no, team_number, team_name, school, elapsed_time,
                        mission_penalty_seconds, manual_penalty_points, final_time,
-                       disqualified, mission_scores_json
+                       disqualified, mission_scores_json, lap1_time, lap2_time, lap3_time
                 FROM race_results
                 WHERE team_number = ? AND round_no = ?
                 ORDER BY id DESC
@@ -241,8 +284,9 @@ class SQLiteManager:
                 )
                 SELECT id, created_at, round_no, team_number, team_name, school, elapsed_time,
                        mission_penalty_seconds, manual_penalty_points, final_time,
-                       disqualified, mission_scores_json
+                       disqualified, mission_scores_json, lap1_time, lap2_time, lap3_time
                 FROM latest
+                WHERE NOT (disqualified = 0 AND final_time IS NOT NULL AND final_time <= 0)
                 ORDER BY disqualified ASC, final_time ASC, team_number ASC
                 LIMIT ?
                 """,
@@ -266,8 +310,9 @@ class SQLiteManager:
                 )
                 SELECT id, created_at, round_no, team_number, team_name, school, elapsed_time,
                        mission_penalty_seconds, manual_penalty_points, final_time,
-                       disqualified, mission_scores_json
+                       disqualified, mission_scores_json, lap1_time, lap2_time, lap3_time
                 FROM latest
+                WHERE NOT (disqualified = 0 AND final_time IS NOT NULL AND final_time <= 0)
                 ORDER BY disqualified ASC, final_time ASC, team_number ASC
                 LIMIT ?
                 """,
@@ -285,11 +330,13 @@ class SQLiteManager:
                 FROM race_results
                 WHERE disqualified = 0
                   AND final_time IS NOT NULL
+                  AND final_time > 0
                 GROUP BY team_number
             )
             SELECT rr.id, rr.created_at, rr.round_no, rr.team_number, rr.team_name, rr.school,
                    rr.elapsed_time, rr.mission_penalty_seconds, rr.manual_penalty_points,
-                   rr.final_time, rr.disqualified, rr.mission_scores_json
+                   rr.final_time, rr.disqualified, rr.mission_scores_json,
+                   rr.lap1_time, rr.lap2_time, rr.lap3_time
             FROM race_results rr
             JOIN best b
               ON rr.team_number = b.team_number
@@ -336,6 +383,7 @@ class SQLiteManager:
                 MAX(CASE WHEN round_no = 1 THEN 1 ELSE 0 END) AS round1_done,
                 MAX(CASE WHEN round_no = 2 THEN 1 ELSE 0 END) AS round2_done
             FROM race_results
+            WHERE NOT (disqualified = 0 AND final_time IS NOT NULL AND final_time <= 0)
             GROUP BY team_number
             """
         ).fetchall()
@@ -408,6 +456,9 @@ class SQLiteManager:
             "final_time": None if final_time is None else float(final_time),
             "disqualified": bool(row["disqualified"]),
             "mission_scores": mission_scores,
+            "lap1_time": None if row["lap1_time"] is None else float(row["lap1_time"]),
+            "lap2_time": None if row["lap2_time"] is None else float(row["lap2_time"]),
+            "lap3_time": None if row["lap3_time"] is None else float(row["lap3_time"]),
         }
 
     def close(self) -> None:

@@ -33,7 +33,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>20</y>
+      <y>10</y>
       <width>821</width>
       <height>101</height>
      </rect>
@@ -79,10 +79,10 @@
    <widget class="QLabel" name="lblTime">
     <property name="geometry">
      <rect>
-      <x>400</x>
-      <y>150</y>
+      <x>390</x>
+      <y>130</y>
       <width>431</width>
-      <height>191</height>
+      <height>181</height>
      </rect>
     </property>
     <property name="styleSheet">
@@ -2488,9 +2488,9 @@
    <widget class="QLabel" name="lblLap1Time">
     <property name="geometry">
      <rect>
-      <x>460</x>
-      <y>360</y>
-      <width>201</width>
+      <x>370</x>
+      <y>330</y>
+      <width>171</width>
       <height>31</height>
      </rect>
     </property>
@@ -2510,9 +2510,9 @@
    <widget class="QLabel" name="lblLap2Time">
     <property name="geometry">
      <rect>
-      <x>680</x>
-      <y>360</y>
-      <width>201</width>
+      <x>550</x>
+      <y>330</y>
+      <width>171</width>
       <height>31</height>
      </rect>
     </property>
@@ -2527,6 +2527,28 @@
     </property>
     <property name="text">
      <string>LAP2</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="lblLap3Time">
+    <property name="geometry">
+     <rect>
+      <x>730</x>
+      <y>330</y>
+      <width>171</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">font-size: 30px; font-weight: bold;</string>
+    </property>
+    <property name="text">
+     <string>LAP3</string>
     </property>
    </widget>
   </widget>

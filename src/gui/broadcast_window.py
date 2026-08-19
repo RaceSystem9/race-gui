@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QFile, QIODevice, QTimer, Qt
 from PySide6.QtGui import QPixmap
@@ -63,8 +63,10 @@ class BroadcastWindow(QMainWindow):
         self.school_label = self._required_label("lblSchool")
         self.school_logo_label = self._required_label("lblSchoolLogo")
         self.time_label = self._required_label("lblTime")
+        self._time_label_default_style = self.time_label.styleSheet()
         self.lap1_time_label = self._required_label("lblLap1Time")
         self.lap2_time_label = self._required_label("lblLap2Time")
+        self.lap3_time_label = self._required_label("lblLap3Time")
         self.state_label = self.findChild(QLabel, "lblState")
         self.info_label = self._required_label("lblInfo")
         self.rank_round_label = self._required_label("lblRankRound")
@@ -118,13 +120,24 @@ class BroadcastWindow(QMainWindow):
         self.rank_round_label.setText("(1차 오전)" if self.controller.current_round == 1 else "(2차 오후)")
         self.team_no_label.setText(str(team_number))
         self.school_label.setText(school_name)
-        self.time_label.setText(f"{race_elapsed:05.2f}")
+        if state.status == "COUNTDOWN":
+            self.time_label.setStyleSheet(self._time_label_default_style + "color: #ff69b4;")
+            self.time_label.setText(f"- {max(0, int(state.countdown))}")
+        else:
+            self.time_label.setStyleSheet(self._time_label_default_style)
+            self.time_label.setText(f"{race_elapsed:05.2f}")
         if self.state_label is not None:
             self.state_label.setText(state.status)
         self._refresh_school_logo(team_number)
         self._refresh_member_info(current)
         self.lap1_time_label.setText(f"LAP1  {state.lap1_time:05.2f}" if state.lap1_time is not None else "LAP1  -")
-        self.lap2_time_label.setText(f"LAP2  {state.lap2_time:05.2f}" if state.lap2_time is not None else "LAP2  -")
+        lap_durations = self.controller.get_live_lap_durations()
+        self.lap2_time_label.setText(
+            f"LAP2  {lap_durations['lap2_time']:05.2f}" if lap_durations["lap2_time"] is not None else "LAP2  -"
+        )
+        self.lap3_time_label.setText(
+            f"LAP3  {lap_durations['lap3_time']:05.2f}" if lap_durations["lap3_time"] is not None else "LAP3  -"
+        )
 
         mission_total_seconds = self._refresh_mission_scores(state)
         self.mission_total_label.setText(f"{mission_total_seconds:.2f}")
@@ -192,7 +205,28 @@ class BroadcastWindow(QMainWindow):
         return total_seconds
 
     def _refresh_ranking_board(self) -> None:
-        rows = self.controller.get_active_leaderboard(limit=22)
+        max_rows = 22
+        raced_rows = self.controller.get_active_leaderboard(limit=max_rows)
+        raced_team_numbers = {int(row.get("team_number", 0) or 0) for row in raced_rows}
+        giveup_rows = [
+            {
+                "team_name": team.get("team_name", "-"),
+                "school": team.get("school", "-"),
+                "final_time": 999,
+                "giveup": True,
+            }
+            for team in self.controller.get_giveup_teams()
+            if int(team.get("number", 0) or 0) not in raced_team_numbers
+        ][:max_rows]
+
+        # Give-up teams always occupy the bottom-most rows of the board, even if no
+        # other team has raced yet, so they never appear as rank 1.
+        board_rows: List[Optional[Dict[str, Any]]] = [None] * max_rows
+        for index, row in enumerate(raced_rows[: max_rows - len(giveup_rows)]):
+            board_rows[index] = row
+        for offset, row in enumerate(giveup_rows):
+            board_rows[max_rows - len(giveup_rows) + offset] = row
+
         progress_map = self.controller.get_team_progress_map()
 
         def _short_progress(team_no: int) -> str:
@@ -211,10 +245,13 @@ class BroadcastWindow(QMainWindow):
             school_label = self.rank_school_labels[rank]
             score_label = self.rank_score_labels[rank]
 
-            if rank <= len(rows):
-                row = rows[rank - 1]
+            row = board_rows[rank - 1]
+            if row is not None:
                 team_label.setText(str(row.get("team_name", "-")))
                 school_label.setText(str(row.get("school", "-")))
+                if row.get("giveup"):
+                    score_label.setText("포기")
+                    continue
                 final_time = row.get("final_time")
                 disqualified = bool(row.get("disqualified", False))
                 score_label.setText("실격" if disqualified or final_time is None else f"{float(final_time):.2f}")

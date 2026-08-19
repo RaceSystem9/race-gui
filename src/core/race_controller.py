@@ -17,11 +17,11 @@ class RaceController(QObject):
     log_changed = Signal(str)
     leaderboard_changed = Signal()
     MISSION_SECONDS = {
-        "lblMIssionScore1": 5,
-        "lblMIssionScore2": 5,
+        "lblMIssionScore1": 10,
+        "lblMIssionScore2": 3,
         "lblMIssionScore3": 5,
-        "lblMIssionScore4": 5,
-        "lblMIssionScore5": 5,
+        "lblMIssionScore4": 10,
+        "lblMIssionScore5": 10,
     }
     VIEW_MODE_ROUND1 = "ROUND1"
     VIEW_MODE_ROUND2 = "ROUND2"
@@ -61,6 +61,7 @@ class RaceController(QObject):
         latest_snapshot = self.database.get_latest_final_snapshot()
         self.final_snapshot_id = int(latest_snapshot["id"]) if latest_snapshot else None
         self._run_finalized = False
+        self._loaded_lap_durations: Optional[Dict[str, Optional[float]]] = None
         self._official_timer_base_ms: Optional[float] = None
         self._pi_status_available = False
         self._pi_connected_count = 0
@@ -111,6 +112,7 @@ class RaceController(QObject):
             "car_name": team.get("car_name", "N/A"),
             "num_of_members": team.get("num_of_members", 0),
             "members": team.get("members", []),
+            "giveup": bool(int(team.get("giveup", 0) or 0)),
         }
 
     def _assign_teams(self) -> None:
@@ -126,12 +128,48 @@ class RaceController(QObject):
         next_next_index = (self.team_index + 2) % len(self.teams)
         self.state.next_next_team = dict(self.teams[next_next_index])
 
+    def _load_existing_result_for_current_team(self) -> None:
+        # Restore a previously saved result so admins can revisit/correct an earlier team's
+        # mission scores without recomputing lap times from a freshly-reset (zeroed) state.
+        current = self.state.current_team or {}
+        team_number = int(current.get("number", 0) or 0)
+        existing = self.database.get_latest_result_for_team(team_number, round_no=self.current_round)
+        if not existing:
+            return
+
+        self.state.status = "FINISHED"
+        self.state.elapsed_time = float(existing.get("elapsed_time", 0.0))
+        self.state.official_elapsed_time = self.state.elapsed_time
+        self.state.lap = self.MAX_LAPS
+        self.state.mission_scores = dict(existing.get("mission_scores") or self._default_mission_scores())
+        self.state.mission_penalty_seconds = float(existing.get("mission_penalty_seconds", 0.0))
+        self.state.penalty_points = int(existing.get("manual_penalty_points", 0))
+        self.state.final_time = existing.get("final_time")
+        self.state.disqualified = bool(existing.get("disqualified", False))
+        self.state.rank = (
+            self.database.rank_for_time(self.state.final_time, round_no=self.current_round)
+            if self.state.final_time is not None
+            else None
+        )
+        self._loaded_lap_durations = {
+            "lap1_time": existing.get("lap1_time"),
+            "lap2_time": existing.get("lap2_time"),
+            "lap3_time": existing.get("lap3_time"),
+        }
+        self._run_finalized = True
+        self._record(f"Loaded existing result for team {team_number} (round {self.current_round})")
+
+    @property
+    def has_finalized_run(self) -> bool:
+        # True once the current team/round has a saved result that Start/Reset would wipe.
+        return self._run_finalized
+
     def start(self) -> None:
         self.countdown_timer.stop()
         self.timer.stop()
         self.state.status = "COUNTDOWN"
-        self.state.traffic_light = "YELLOW"
-        self.state.countdown = 3
+        self.state.traffic_light = "RED"
+        self.state.countdown = 5
         self.state.timer_running = False
         self.state.elapsed_time = 0.0
         self.state.official_elapsed_time = None
@@ -139,16 +177,19 @@ class RaceController(QObject):
         self.state.lap = 0
         self.state.lap1_time = None
         self.state.lap2_time = None
+        self.state.lap3_time = None
         self.state.mission_scores = self._default_mission_scores()
         self.state.mission_penalty_seconds = 0.0
         self.state.final_time = None
         self.state.disqualified = False
         self._run_finalized = False
+        self._loaded_lap_durations = None
         self._record("START button pressed")
         self.countdown_timer.start()
         self._emit_state()
 
     def _countdown_tick(self) -> None:
+        # Displays 5-4-3-2-1 (stops before 0) then starts the race.
         if self.state.countdown <= 1:
             self.countdown_timer.stop()
             self.state.status = "RUNNING"
@@ -167,7 +208,7 @@ class RaceController(QObject):
         self.countdown_timer.stop()
         self.state.timer_running = False
         self.state.status = "FINISHED"
-        self.state.traffic_light = "YELLOW"
+        self.state.traffic_light = "RED"
         if mission_scores is not None:
             self.set_mission_scores(mission_scores)
         self._finalize_current_run()
@@ -187,6 +228,7 @@ class RaceController(QObject):
         self.state.lap = 0
         self.state.lap1_time = None
         self.state.lap2_time = None
+        self.state.lap3_time = None
         self.state.status = "IDLE"
         self.state.traffic_light = "RED"
         self.state.best_lap = None
@@ -197,6 +239,7 @@ class RaceController(QObject):
         self.state.final_time = None
         self.state.disqualified = False
         self._run_finalized = False
+        self._loaded_lap_durations = None
         self._record("RESET button pressed")
         self._emit_state()
 
@@ -213,6 +256,7 @@ class RaceController(QObject):
         self.state.lap = 0
         self.state.lap1_time = None
         self.state.lap2_time = None
+        self.state.lap3_time = None
         self.state.best_lap = None
         self.state.rank = None
         self.state.penalty_points = 0
@@ -221,21 +265,25 @@ class RaceController(QObject):
         self.state.final_time = None
         self.state.disqualified = False
         self._run_finalized = False
+        self._loaded_lap_durations = None
         self._record("NEXT team requested")
+        self._load_existing_result_for_current_team()
         self._emit_state()
 
-    def retry(self) -> None:
+    def prev_team(self) -> None:
         self.timer.stop()
         self.countdown_timer.stop()
+        self.team_index = (self.team_index - 1) % max(1, len(self.teams))
+        self._assign_teams()
+        self.state.status = "READY"
+        self.state.traffic_light = "RED"
         self.state.elapsed_time = 0.0
         self.state.official_elapsed_time = None
         self._official_timer_base_ms = None
         self.state.lap = 0
         self.state.lap1_time = None
         self.state.lap2_time = None
-        self.state.status = "READY"
-        self.state.traffic_light = "RED"
-        self.state.timer_running = False
+        self.state.lap3_time = None
         self.state.best_lap = None
         self.state.rank = None
         self.state.penalty_points = 0
@@ -244,18 +292,9 @@ class RaceController(QObject):
         self.state.final_time = None
         self.state.disqualified = False
         self._run_finalized = False
-        self._record("RETRY button pressed")
-        self._emit_state()
-
-    def penalty(self, mission_scores: Optional[Dict[str, int]] = None) -> None:
-        if mission_scores is not None:
-            self.set_mission_scores(mission_scores)
-        self.state.penalty_points += 1
-        if self.state.status == "FINISHED" or self._run_finalized:
-            self._finalize_current_run(force_update=True)
-            self.leaderboard_changed.emit()
-            self._emit_state()
-        self._record(f"Penalty applied: {self.state.penalty_points}")
+        self._loaded_lap_durations = None
+        self._record("PREV team requested")
+        self._load_existing_result_for_current_team()
         self._emit_state()
 
     def disqualify(self) -> None:
@@ -348,6 +387,8 @@ class RaceController(QObject):
                             self.state.lap1_time = lap_elapsed
                         elif lap_index == 2:
                             self.state.lap2_time = lap_elapsed
+                        elif lap_index == 3:
+                            self.state.lap3_time = lap_elapsed
                 else:
                     # Fallback when server is old and does not send lap metadata.
                     if timestamp_ms is not None:
@@ -368,6 +409,8 @@ class RaceController(QObject):
                         self.state.lap1_time = race_elapsed
                     elif self.state.lap == 2:
                         self.state.lap2_time = race_elapsed
+                    elif self.state.lap == 3:
+                        self.state.lap3_time = race_elapsed
 
                 if self.state.lap >= self.MAX_LAPS:
                     self._auto_stop_after_last_lap()
@@ -387,7 +430,7 @@ class RaceController(QObject):
         self.countdown_timer.stop()
         self.state.timer_running = False
         self.state.status = "FINISHED"
-        self.state.traffic_light = "YELLOW"
+        self.state.traffic_light = "RED"
         self._finalize_current_run()
         self.leaderboard_changed.emit()
         self._record("AUTO STOP: reached 3rd trigger")
@@ -573,6 +616,10 @@ class RaceController(QObject):
                     return [row for row in rows if isinstance(row, dict)][: int(limit)]
         return self.database.get_final_leaderboard_best_of_two(limit=limit)
 
+    def get_giveup_teams(self) -> List[Dict[str, Any]]:
+        giveup_teams = [team for team in self.teams if team.get("giveup")]
+        return sorted(giveup_teams, key=lambda team: int(team.get("number", 0) or 0))
+
     def set_view_mode(self, view_mode: str) -> None:
         allowed = {self.VIEW_MODE_ROUND1, self.VIEW_MODE_ROUND2, self.VIEW_MODE_FINAL}
         normalized = str(view_mode).upper().strip()
@@ -637,6 +684,18 @@ class RaceController(QObject):
                 cleaned[name] = max(0, int(value))
         self.state.mission_scores = cleaned
 
+    def clear_mission_scores(self) -> None:
+        self.state.mission_scores = self._default_mission_scores()
+        self._record("Mission scores cleared")
+        self._emit_state()
+
+    def save_mission_scores(self, mission_scores: Dict[str, int]) -> None:
+        self.set_mission_scores(mission_scores)
+        self._finalize_current_run(force_update=True)
+        self.leaderboard_changed.emit()
+        self._record("Mission scores saved")
+        self._emit_state()
+
     def set_round(self, round_no: int) -> None:
         self.current_round = 1 if int(round_no) <= 1 else 2
         self.view_mode = self.VIEW_MODE_ROUND1 if self.current_round == 1 else self.VIEW_MODE_ROUND2
@@ -650,6 +709,30 @@ class RaceController(QObject):
             total += float(score) * float(self.MISSION_SECONDS.get(name, 0))
         return total
 
+    def _lap_durations(self, race_elapsed: float) -> Dict[str, Optional[float]]:
+        durations = self.get_live_lap_durations()
+        # Fallback: last lap wasn't triggered by a gate, derive it from the finish time.
+        if durations["lap3_time"] is None and self.state.lap2_time is not None and self.state.lap3_time is None:
+            durations["lap3_time"] = round(race_elapsed - self.state.lap2_time, 2)
+        return durations
+
+    def get_live_lap_durations(self) -> Dict[str, Optional[float]]:
+        # When viewing a previously saved result, use the DB's per-lap durations directly
+        # instead of the (unset) live state, which was cleared when this team was loaded.
+        if self._loaded_lap_durations is not None:
+            return dict(self._loaded_lap_durations)
+
+        # state.lapN_time holds cumulative split times; convert to individual per-lap durations.
+        lap1 = self.state.lap1_time
+        lap2 = self.state.lap2_time
+        lap3 = self.state.lap3_time
+
+        lap1_duration = round(lap1, 2) if lap1 is not None else None
+        lap2_duration = round(lap2 - lap1, 2) if lap2 is not None and lap1 is not None else None
+        lap3_duration = round(lap3 - lap2, 2) if lap3 is not None and lap2 is not None else None
+
+        return {"lap1_time": lap1_duration, "lap2_time": lap2_duration, "lap3_time": lap3_duration}
+
     def _finalize_current_run(self, force_update: bool = False) -> None:
         if self._run_finalized and not force_update:
             return
@@ -657,6 +740,18 @@ class RaceController(QObject):
         race_elapsed = self.state.official_elapsed_time
         if race_elapsed is None:
             race_elapsed = self.state.elapsed_time
+
+        # A 0.00s "finish" only happens when Stop is pressed without an actual run
+        # (e.g. right after Reset). Treat it as a full reset for this team/round:
+        # wipe any previously saved result so it looks like the team never raced.
+        if not self.state.disqualified and race_elapsed <= 0:
+            current = self.state.current_team or {}
+            team_number = int(current.get("number", 0) or 0)
+            self.database.delete_race_result(team_number, self.current_round)
+            self.state.final_time = None
+            self.state.rank = None
+            self._record(f"STOP ignored: no elapsed race time (0.00s) for team {team_number}, cleared as not raced")
+            return
 
         self.state.mission_penalty_seconds = self._mission_penalty_seconds()
         if self.state.disqualified:
@@ -678,6 +773,9 @@ class RaceController(QObject):
             "disqualified": bool(self.state.disqualified),
             "mission_scores": dict(self.state.mission_scores),
         }
+        # Reuse lap durations loaded from a prior saved result (editing an earlier team)
+        # instead of recomputing from cumulative split fields that were never re-populated.
+        result.update(self._loaded_lap_durations or self._lap_durations(race_elapsed))
 
         self.database.append_race_result(result)
         if self.state.final_time is not None:
