@@ -27,6 +27,11 @@ class MainWindow(QMainWindow):
     WS_SETTINGS_GROUP = "network"
     WS_HOST_KEY = "race_ws_host"
     WS_PORT_KEY = "race_ws_port"
+    # Qt's native up/down subcontrol hit-testing misroutes clicks for the mission score
+    # spinboxes' custom side-by-side buttons, so eventFilter() routes clicks by X position
+    # instead. These must match the widths baked into the .ui stylesheet.
+    SPINBOX_BUTTON_AREA_WIDTH = 56
+    SPINBOX_BUTTON_WIDTH = 28
 
     def __init__(self, controller: RaceController, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -85,7 +90,6 @@ class MainWindow(QMainWindow):
             "team": self._required_label("valTeam"),
             "status": self._required_label("valStatus"),
             "light": self._required_label("valLight"),
-            "time": self._required_label("valTime"),
             "lap": self._required_label("valLap"),
             "best": self._required_label("valBest"),
             "rank": self._required_label("valRank"),
@@ -111,6 +115,7 @@ class MainWindow(QMainWindow):
         }
         for name, spinbox in self.mission_score_spinboxes.items():
             spinbox.valueChanged.connect(lambda value, key=name: self._on_mission_score_changed(key, value))
+            spinbox.installEventFilter(self)
 
     def _wire_actions(self) -> None:
         button_specs = {
@@ -155,19 +160,8 @@ class MainWindow(QMainWindow):
         self.round_toolbar.setMovable(False)
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.round_toolbar)
 
-        round_label = QLabel("라운드:", self)
+        round_label = QLabel("보기:", self)
         self.round_toolbar.addWidget(round_label)
-
-        self.round_selector = QComboBox(self)
-        self.round_selector.addItem("1차", 1)
-        self.round_selector.addItem("2차", 2)
-        self.round_selector.setCurrentIndex(0 if self.controller.current_round == 1 else 1)
-        self.round_selector.currentIndexChanged.connect(self._on_round_changed)
-        self.round_toolbar.addWidget(self.round_selector)
-
-        self.round_toolbar.addSeparator()
-        view_mode_label = QLabel("보기:", self)
-        self.round_toolbar.addWidget(view_mode_label)
 
         self.view_mode_selector = QComboBox(self)
         self.view_mode_selector.addItem("1차", self.controller.VIEW_MODE_ROUND1)
@@ -191,10 +185,6 @@ class MainWindow(QMainWindow):
         self.round_toolbar.addWidget(self.server_button)
 
         self._sync_view_mode_selector()
-
-    def _on_round_changed(self, index: int) -> None:
-        round_no = int(self.round_selector.itemData(index) or 1)
-        self.controller.set_round(round_no)
 
     def _on_view_mode_changed(self, index: int) -> None:
         view_mode = str(self.view_mode_selector.itemData(index) or self.controller.VIEW_MODE_ROUND1)
@@ -350,9 +340,6 @@ class MainWindow(QMainWindow):
 
     def refresh_from_state(self, state: RaceState) -> None:
         current = state.current_team or {}
-        self.round_selector.blockSignals(True)
-        self.round_selector.setCurrentIndex(0 if self.controller.current_round == 1 else 1)
-        self.round_selector.blockSignals(False)
         self._sync_view_mode_selector()
 
         self.current_team_label.setText(
@@ -366,7 +353,6 @@ class MainWindow(QMainWindow):
         self.summary_labels["status"].setText(state.status)
         self.summary_labels["light"].setText(state.traffic_light)
         summary_time = state.final_time if state.final_time is not None else state.elapsed_time
-        self.summary_labels["time"].setText(f"{summary_time:.2f}")
         current_lap = max(0, int(state.lap or 0))
         self.summary_labels["lap"].setText(f"{current_lap}/{self.controller.MAX_LAPS}")
         self.summary_labels["best"].setText(f"{state.best_lap:.2f}" if state.best_lap is not None else "-")
@@ -418,6 +404,37 @@ class MainWindow(QMainWindow):
     def _on_mission_score_changed(self, name: str, value: int) -> None:
         # Keep controller state in sync so periodic refresh doesn't overwrite the user's click.
         self.controller.state.mission_scores[name] = value
+
+    def eventFilter(self, watched, event):  # noqa: N802
+        if (
+            isinstance(watched, QSpinBox)
+            and watched in self.mission_score_spinboxes.values()
+            and event.type()
+            in (
+                QEvent.Type.MouseButtonPress,
+                QEvent.Type.MouseButtonRelease,
+                QEvent.Type.MouseButtonDblClick,
+            )
+        ):
+            x = event.position().x()
+            width = watched.width()
+            if x >= width - self.SPINBOX_BUTTON_AREA_WIDTH:
+                # Swallow press/release/double-click in the button area so Qt's own
+                # (buggy) native up/down handling never runs a second step on release.
+                # Rapid successive clicks land within Qt's double-click interval and
+                # arrive as MouseButtonDblClick instead of a second Press, so step on
+                # that too or fast clicking would only register every other click.
+                is_steppable = event.type() in (
+                    QEvent.Type.MouseButtonPress,
+                    QEvent.Type.MouseButtonDblClick,
+                )
+                if is_steppable and event.button() == Qt.MouseButton.LeftButton:
+                    if x >= width - self.SPINBOX_BUTTON_WIDTH:
+                        watched.stepDown()
+                    else:
+                        watched.stepUp()
+                return True
+        return super().eventFilter(watched, event)
 
     def _on_clear_mission_score_clicked(self) -> None:
         for spinbox in self.mission_score_spinboxes.values():

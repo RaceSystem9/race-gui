@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>레이스 방송 정보 - 홈</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<nav class="topnav">
+  <a href="/index.html" class="active">홈</a>
+  <a href="/live.html">실시간 경주</a>
+  <a href="/leaderboard.html">순위표</a>
+  <a href="/teams.html">참가팀</a>
+  <a href="/info.html">안내</a>
+  <span id="connStatus" class="conn-status">연결 확인 중...</span>
+</nav>
+<main>
+  <h1>레이스 방송 정보</h1>
+  <h2 id="subtitle">현재 진행: -</h2>
+
+  <div class="grid cols-2">
+    <a class="tile" href="/live.html">
+      <div class="tile-title">🏁 실시간 경주</div>
+      <div class="tile-desc">현재 팀, 타이머, Lap 기록을 실시간으로 확인합니다.</div>
+    </a>
+    <a class="tile" href="/leaderboard.html">
+      <div class="tile-title">🏆 순위표</div>
+      <div class="tile-desc">1차 / 2차 / 최종 순위를 확인합니다.</div>
+    </a>
+    <a class="tile" href="/teams.html">
+      <div class="tile-title">👥 참가팀 현황</div>
+      <div class="tile-desc">전체 참가팀의 라운드 진행 상태를 확인합니다.</div>
+    </a>
+    <a class="tile" href="/info.html">
+      <div class="tile-title">ℹ️ 안내</div>
+      <div class="tile-desc">이 페이지 사용 방법을 안내합니다.</div>
+    </a>
+  </div>
+
+  <footer class="hint">약 0.5초마다 자동 갱신됩니다.</footer>
+</main>
+<script src="/app.js"></script>
+<script>
+  startBroadcastPolling((data) => {
+    const subtitle = document.getElementById("subtitle");
+    const teamName = data.team ? data.team.name : "-";
+    subtitle.textContent = `현재 진행: [${data.view_mode_title || "-"}] ${teamName}`;
+  });
+</script>
+</body>
+</html>

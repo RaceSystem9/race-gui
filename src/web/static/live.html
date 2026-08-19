@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>실시간 경주 - 레이스 방송 정보</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<nav class="topnav">
+  <a href="/index.html">홈</a>
+  <a href="/live.html" class="active">실시간 경주</a>
+  <a href="/leaderboard.html">순위표</a>
+  <a href="/teams.html">참가팀</a>
+  <a href="/info.html">안내</a>
+  <span id="connStatus" class="conn-status">연결 확인 중...</span>
+</nav>
+<main>
+  <h2 id="roundTitle">-</h2>
+  <div class="team-title" id="teamTitle">- / -</div>
+  <div class="team-sub" id="teamSub">번호 - · 상태 -</div>
+
+  <div class="grid cols-2" style="margin-top: 24px;">
+    <div class="card">
+      <div id="timer" class="big-timer">00.00</div>
+    </div>
+    <div class="card" style="display:flex; align-items:center; justify-content:center;">
+      <span id="lightBadge" class="light-badge RED">RED</span>
+    </div>
+  </div>
+
+  <div class="lap-row">
+    <div class="lap-chip"><span class="lap-label">LAP 1</span><span id="lap1">-</span></div>
+    <div class="lap-chip"><span class="lap-label">LAP 2</span><span id="lap2">-</span></div>
+    <div class="lap-chip"><span class="lap-label">LAP 3</span><span id="lap3">-</span></div>
+  </div>
+
+  <div class="card" style="margin-top: 18px;">
+    <h2>미션 점수</h2>
+    <div id="missionScores" class="mission-scores">-</div>
+    <div style="margin-top: 10px; color: var(--muted);">
+      최종 기록: <strong id="finalTime">-</strong> · 순위: <strong id="rankValue">-</strong>
+    </div>
+  </div>
+
+  <footer class="hint">약 0.5초마다 자동 갱신됩니다.</footer>
+</main>
+<script src="/app.js"></script>
+<script>
+  const MISSION_LABELS = {
+    lblMIssionScore1: "신호등",
+    lblMIssionScore2: "라바콘",
+    lblMIssionScore3: "차선",
+    lblMIssionScore4: "미션4",
+    lblMIssionScore5: "미션5",
+  };
+
+  startBroadcastPolling((data) => {
+    document.getElementById("roundTitle").textContent = `[${data.view_mode_title || "-"}] 진행 상태`;
+
+    const team = data.team || {};
+    document.getElementById("teamTitle").textContent = `#${team.number ?? "-"} ${team.name ?? "-"}`;
+    document.getElementById("teamSub").textContent = `${team.school ?? "-"} · 상태 ${data.status ?? "-"}`;
+
+    const timerEl = document.getElementById("timer");
+    if (data.status === "COUNTDOWN") {
+      timerEl.textContent = `- ${Math.max(0, Number(data.countdown ?? 0))}`;
+      timerEl.classList.add("countdown");
+    } else {
+      const shownTime = data.final_time ?? data.official_elapsed_time ?? data.elapsed_time;
+      timerEl.textContent = formatSeconds(shownTime);
+      timerEl.classList.remove("countdown");
+    }
+
+    const lightBadge = document.getElementById("lightBadge");
+    const light = data.traffic_light || "RED";
+    lightBadge.textContent = light;
+    lightBadge.className = `light-badge ${light}`;
+
+    const laps = data.lap_times || {};
+    document.getElementById("lap1").textContent = formatSeconds(laps.lap1_time);
+    document.getElementById("lap2").textContent = formatSeconds(laps.lap2_time);
+    document.getElementById("lap3").textContent = formatSeconds(laps.lap3_time);
+
+    const scores = data.mission_scores || {};
+    const scoreHtml = Object.entries(MISSION_LABELS)
+      .map(([key, label]) => `<span class="mission-chip">${label}: ${escapeHtml(scores[key] ?? 0)}</span>`)
+      .join("");
+    document.getElementById("missionScores").innerHTML = scoreHtml;
+
+    document.getElementById("finalTime").textContent = formatSeconds(data.final_time);
+    document.getElementById("rankValue").textContent = data.rank ?? "-";
+  });
+</script>
+</body>
+</html>

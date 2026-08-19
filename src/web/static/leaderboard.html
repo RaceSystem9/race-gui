@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>순위표 - 레이스 방송 정보</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<nav class="topnav">
+  <a href="/index.html">홈</a>
+  <a href="/live.html">실시간 경주</a>
+  <a href="/leaderboard.html" class="active">순위표</a>
+  <a href="/teams.html">참가팀</a>
+  <a href="/info.html">안내</a>
+  <span id="connStatus" class="conn-status">연결 확인 중...</span>
+</nav>
+<main>
+  <h1>순위표</h1>
+  <div class="tabs">
+    <button data-mode="ROUND1" class="active">1차</button>
+    <button data-mode="ROUND2">2차</button>
+    <button data-mode="FINAL">최종</button>
+  </div>
+
+  <table class="leaderboard">
+    <thead>
+      <tr><th class="rank">순위</th><th>팀명</th><th>학교</th><th class="time">기록</th></tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <footer class="hint">약 0.5초마다 자동 갱신됩니다.</footer>
+</main>
+<script src="/app.js"></script>
+<script>
+  let currentMode = "ROUND1";
+  let latestData = null;
+
+  function renderRows() {
+    const tbody = document.getElementById("rows");
+    if (!latestData) return;
+    const rows = (latestData.leaderboards && latestData.leaderboards[currentMode]) || [];
+    tbody.innerHTML = rows
+      .map((row, index) => {
+        if (!row || row.team_name === "-") return "";
+        const isGiveup = Boolean(row.giveup);
+        const isDisqualified = Boolean(row.disqualified);
+        let timeText;
+        if (isGiveup) {
+          timeText = "포기";
+        } else if (isDisqualified || row.final_time === null || row.final_time === undefined) {
+          timeText = "실격";
+        } else {
+          timeText = formatSeconds(row.final_time);
+        }
+        const rowClass = isGiveup || isDisqualified ? "giveup" : "";
+        return `<tr class="${rowClass}">
+          <td class="rank">${index + 1}</td>
+          <td>${escapeHtml(row.team_name)}</td>
+          <td>${escapeHtml(row.school)}</td>
+          <td class="time">${timeText}</td>
+        </tr>`;
+      })
+      .join("");
+  }
+
+  document.querySelectorAll(".tabs button").forEach((button) => {
+    button.addEventListener("click", () => {
+      currentMode = button.dataset.mode;
+      document.querySelectorAll(".tabs button").forEach((b) => b.classList.remove("active"));
+      button.classList.add("active");
+      renderRows();
+    });
+  });
+
+  startBroadcastPolling((data) => {
+    latestData = data;
+    renderRows();
+  });
+</script>
+</body>
+</html>

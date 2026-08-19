@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -63,11 +64,15 @@ class RaceController(QObject):
         self._run_finalized = False
         self._loaded_lap_durations: Optional[Dict[str, Optional[float]]] = None
         self._official_timer_base_ms: Optional[float] = None
+        # Serializes SQLite access between the Qt main thread and the web broadcast
+        # server's background thread (the connection is shared, not per-thread).
+        self.db_lock = threading.Lock()
         self._pi_status_available = False
         self._pi_connected_count = 0
         self._pi_devices: List[Dict[str, Any]] = []
         self._pi_status_last_received_at = 0.0
         self._assign_teams()
+        self._load_existing_result_for_current_team()
 
         self.timer = QTimer(self)
         self.timer.setInterval(10)
@@ -603,10 +608,11 @@ class RaceController(QObject):
     def get_final_leaderboard(self, limit: int = 22) -> List[Dict[str, Any]]:
         return self.database.get_final_leaderboard_best_of_two(limit=limit)
 
-    def get_active_leaderboard(self, limit: int = 22) -> List[Dict[str, Any]]:
-        if self.view_mode == self.VIEW_MODE_ROUND1:
+    def get_leaderboard_for_view(self, view_mode: str, limit: int = 22) -> List[Dict[str, Any]]:
+        normalized = str(view_mode).upper().strip()
+        if normalized == self.VIEW_MODE_ROUND1:
             return self.database.get_leaderboard(limit=limit, round_no=1)
-        if self.view_mode == self.VIEW_MODE_ROUND2:
+        if normalized == self.VIEW_MODE_ROUND2:
             return self.database.get_leaderboard(limit=limit, round_no=2)
         if self.final_snapshot_id is not None:
             snapshot = self.database.get_final_snapshot(self.final_snapshot_id)
@@ -616,18 +622,135 @@ class RaceController(QObject):
                     return [row for row in rows if isinstance(row, dict)][: int(limit)]
         return self.database.get_final_leaderboard_best_of_two(limit=limit)
 
+    def get_active_leaderboard(self, limit: int = 22) -> List[Dict[str, Any]]:
+        return self.get_leaderboard_for_view(self.view_mode, limit=limit)
+
     def get_giveup_teams(self) -> List[Dict[str, Any]]:
         giveup_teams = [team for team in self.teams if team.get("giveup")]
         return sorted(giveup_teams, key=lambda team: int(team.get("number", 0) or 0))
+
+    def get_ranking_board_rows(self, max_rows: int = 22, view_mode: Optional[str] = None) -> List[Optional[Dict[str, Any]]]:
+        # Shared by BroadcastWindow and the web broadcast server so both show the
+        # exact same ranking (give-up teams always pinned to the bottom-most rows).
+        raced_rows = self.get_leaderboard_for_view(view_mode or self.view_mode, limit=max_rows)
+        raced_team_numbers = {int(row.get("team_number", 0) or 0) for row in raced_rows}
+        giveup_rows = [
+            {
+                "team_name": team.get("team_name", "-"),
+                "school": team.get("school", "-"),
+                "final_time": 999,
+                "giveup": True,
+            }
+            for team in self.get_giveup_teams()
+            if int(team.get("number", 0) or 0) not in raced_team_numbers
+        ][:max_rows]
+
+        board_rows: List[Optional[Dict[str, Any]]] = [None] * max_rows
+        for index, row in enumerate(raced_rows[: max_rows - len(giveup_rows)]):
+            board_rows[index] = row
+        for offset, row in enumerate(giveup_rows):
+            board_rows[max_rows - len(giveup_rows) + offset] = row
+        return board_rows
+
+    def get_broadcast_snapshot(self) -> Dict[str, Any]:
+        # Called from the web broadcast server's background thread, so all SQLite
+        # access here must go through db_lock (the connection is shared with the Qt
+        # main thread, which does not itself take the lock for its own DB calls).
+        with self.db_lock:
+            board_rows = self.get_ranking_board_rows(max_rows=22)
+            leaderboards = {
+                "ROUND1": self.get_ranking_board_rows(max_rows=22, view_mode=self.VIEW_MODE_ROUND1),
+                "ROUND2": self.get_ranking_board_rows(max_rows=22, view_mode=self.VIEW_MODE_ROUND2),
+                "FINAL": self.get_ranking_board_rows(max_rows=22, view_mode=self.VIEW_MODE_FINAL),
+            }
+            progress_map = self.get_team_progress_map()
+
+        state = self.state
+        current = state.current_team or {}
+        lap_durations = self.get_live_lap_durations()
+        teams = [
+            {
+                "number": int(team.get("number", 0) or 0),
+                "team_name": team.get("team_name", "-"),
+                "school": team.get("school", "-"),
+                "giveup": bool(team.get("giveup", False)),
+            }
+            for team in self.teams
+        ]
+
+        return {
+            "generated_at": time.time(),
+            "current_round": self.current_round,
+            "view_mode": self.view_mode,
+            "view_mode_title": self.get_view_mode_title(),
+            "team": {
+                "number": int(current.get("number", 0) or 0),
+                "name": current.get("team_name", "N/A"),
+                "school": current.get("school", "N/A"),
+            },
+            "status": state.status,
+            "traffic_light": state.traffic_light,
+            "countdown": int(state.countdown or 0),
+            "elapsed_time": state.elapsed_time,
+            "official_elapsed_time": state.official_elapsed_time,
+            "final_time": state.final_time,
+            "rank": state.rank,
+            "lap": state.lap,
+            "lap_times": lap_durations,
+            "mission_scores": dict(state.mission_scores),
+            "mission_penalty_seconds": state.mission_penalty_seconds,
+            "leaderboard": [
+                row if row is not None else {"team_name": "-", "school": "-", "final_time": None}
+                for row in board_rows
+            ],
+            "leaderboards": {
+                mode: [
+                    row if row is not None else {"team_name": "-", "school": "-", "final_time": None}
+                    for row in rows
+                ]
+                for mode, rows in leaderboards.items()
+            },
+            "team_progress": {str(team_no): info for team_no, info in progress_map.items()},
+            "teams": teams,
+        }
 
     def set_view_mode(self, view_mode: str) -> None:
         allowed = {self.VIEW_MODE_ROUND1, self.VIEW_MODE_ROUND2, self.VIEW_MODE_FINAL}
         normalized = str(view_mode).upper().strip()
         self.view_mode = normalized if normalized in allowed else self.VIEW_MODE_ROUND1
+        previous_round = self.current_round
         if self.view_mode == self.VIEW_MODE_ROUND1:
             self.current_round = 1
         elif self.view_mode == self.VIEW_MODE_ROUND2:
             self.current_round = 2
+
+        if self.view_mode in (self.VIEW_MODE_ROUND1, self.VIEW_MODE_ROUND2) and self.current_round != previous_round:
+            # Reload the currently displayed team's saved result for the newly
+            # selected round instead of leaving the other round's data on screen.
+            self.timer.stop()
+            self.countdown_timer.stop()
+            self.state.status = "READY"
+            self.state.traffic_light = "RED"
+            self.state.timer_running = False
+            self.state.elapsed_time = 0.0
+            self.state.official_elapsed_time = None
+            self._official_timer_base_ms = None
+            self.state.lap = 0
+            self.state.lap1_time = None
+            self.state.lap2_time = None
+            self.state.lap3_time = None
+            self.state.best_lap = None
+            self.state.rank = None
+            self.state.penalty_points = 0
+            self.state.mission_scores = self._default_mission_scores()
+            self.state.mission_penalty_seconds = 0.0
+            self.state.final_time = None
+            self.state.disqualified = False
+            self._run_finalized = False
+            self._loaded_lap_durations = None
+            self._record(f"VIEW MODE changed to round {self.current_round}")
+            self._load_existing_result_for_current_team()
+
         self.leaderboard_changed.emit()
         self._emit_state()
 
@@ -696,12 +819,6 @@ class RaceController(QObject):
         self._record("Mission scores saved")
         self._emit_state()
 
-    def set_round(self, round_no: int) -> None:
-        self.current_round = 1 if int(round_no) <= 1 else 2
-        self.view_mode = self.VIEW_MODE_ROUND1 if self.current_round == 1 else self.VIEW_MODE_ROUND2
-        self._record(f"ROUND changed to {self.current_round}")
-        self.leaderboard_changed.emit()
-        self._emit_state()
 
     def _mission_penalty_seconds(self) -> float:
         total = 0.0

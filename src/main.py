@@ -10,9 +10,15 @@ from .core.race_controller import RaceController
 from .database.sqlite_manager import SQLiteManager
 from .gui.broadcast_window import BroadcastWindow
 from .gui.main_window import MainWindow
+from .web.server import BroadcastWebServer
 
 
-def build_app(headless: bool = False, ws_host: str | None = None, ws_port: int | None = None):
+def build_app(
+    headless: bool = False,
+    ws_host: str | None = None,
+    ws_port: int | None = None,
+    web_port: int = 8080,
+):
     app = QApplication(sys.argv)
     app.setApplicationName("RaceControl")
     app.setOrganizationName("RaceManager")
@@ -33,6 +39,12 @@ def build_app(headless: bool = False, ws_host: str | None = None, ws_port: int |
     operator_window = MainWindow(controller)
     broadcast_window = BroadcastWindow(controller)
 
+    web_server = BroadcastWebServer(controller.get_broadcast_snapshot, port=web_port)
+    web_server.start()
+    app.aboutToQuit.connect(web_server.stop)
+    local_ip = BroadcastWebServer.discover_local_ip()
+    print(f"Broadcast web server running: http://{local_ip}:{web_server.port}/")
+
     if not headless:
         screens = app.screens()
         if len(screens) > 1:
@@ -52,9 +64,15 @@ def main() -> None:
     parser.add_argument("--headless", action="store_true", help="Create the UI without showing windows")
     parser.add_argument("--ws-host", default=None, help="Race WebSocket server host (e.g. Raspberry Pi IP)")
     parser.add_argument("--ws-port", default=None, type=int, help="Race WebSocket server port")
+    parser.add_argument("--web-port", default=8080, type=int, help="Broadcast web server port (default: 8080)")
     args = parser.parse_args()
 
-    app, *_ = build_app(headless=args.headless, ws_host=args.ws_host, ws_port=args.ws_port)
+    app, *_ = build_app(
+        headless=args.headless,
+        ws_host=args.ws_host,
+        ws_port=args.ws_port,
+        web_port=args.web_port,
+    )
 
     if args.headless:
         app.processEvents()

@@ -11,7 +11,9 @@ class SQLiteManager:
     def __init__(self, db_path: Optional[Path] = None) -> None:
         self.db_path = db_path or Path(__file__).resolve().parents[1] / "database" / "race_control.db"
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.connection = sqlite3.connect(self.db_path)
+        # check_same_thread=False: the web broadcast server reads from a background
+        # thread; callers must serialize access via RaceController's db lock.
+        self.connection = sqlite3.connect(self.db_path, check_same_thread=False)
         self.connection.row_factory = sqlite3.Row
         self.connection.execute(
             "CREATE TABLE IF NOT EXISTS race_events (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, message TEXT NOT NULL)"
@@ -321,32 +323,64 @@ class SQLiteManager:
         return [self._row_to_result_dict(row) for row in rows]
 
     def get_final_leaderboard_best_of_two(self, limit: int = 22) -> List[Dict[str, Any]]:
+        # Compare each team's latest round1 vs round2 result and take the better (lower)
+        # time. A 0.00s or disqualified round is not "usable" as a real time; if the other
+        # round has a real time, that one wins. If neither round has a usable time, the
+        # team is reported as disqualified in the final standings instead of vanishing.
         rows = self.connection.execute(
             """
-            WITH best AS (
-                SELECT
-                    team_number,
-                    MIN(final_time) AS best_final_time
-                FROM race_results
-                WHERE disqualified = 0
-                  AND final_time IS NOT NULL
-                  AND final_time > 0
-                GROUP BY team_number
-            )
-            SELECT rr.id, rr.created_at, rr.round_no, rr.team_number, rr.team_name, rr.school,
-                   rr.elapsed_time, rr.mission_penalty_seconds, rr.manual_penalty_points,
-                   rr.final_time, rr.disqualified, rr.mission_scores_json,
-                   rr.lap1_time, rr.lap2_time, rr.lap3_time
+            SELECT rr.*
             FROM race_results rr
-            JOIN best b
-              ON rr.team_number = b.team_number
-             AND rr.final_time = b.best_final_time
-            ORDER BY rr.final_time ASC, rr.team_number ASC
-            LIMIT ?
-            """,
-            (int(limit),),
+            JOIN (
+                SELECT team_number, round_no, MAX(id) AS max_id
+                FROM race_results
+                WHERE round_no IN (1, 2)
+                GROUP BY team_number, round_no
+            ) latest
+            ON rr.team_number = latest.team_number
+            AND rr.round_no = latest.round_no
+            AND rr.id = latest.max_id
+            """
         ).fetchall()
-        return [self._row_to_result_dict(row) for row in rows]
+
+        rounds_by_team: Dict[int, Dict[int, sqlite3.Row]] = {}
+        for row in rows:
+            team_number = int(row["team_number"])
+            round_no = int(row["round_no"])
+            rounds_by_team.setdefault(team_number, {})[round_no] = row
+
+        results: List[Dict[str, Any]] = []
+        for team_number, round_rows in rounds_by_team.items():
+            usable: List[tuple] = []
+            for round_row in round_rows.values():
+                final_time = round_row["final_time"]
+                disqualified = bool(round_row["disqualified"])
+                if not disqualified and final_time is not None and float(final_time) > 0:
+                    usable.append((float(final_time), round_row))
+
+            if usable:
+                usable.sort(key=lambda item: item[0])
+                best_time, best_row = usable[0]
+                result = self._row_to_result_dict(best_row)
+                result["final_time"] = best_time
+                result["disqualified"] = False
+            else:
+                fallback_row = round_rows.get(1) or round_rows.get(2)
+                result = self._row_to_result_dict(fallback_row)
+                result["final_time"] = None
+                result["disqualified"] = True
+
+            result["team_number"] = team_number
+            results.append(result)
+
+        results.sort(
+            key=lambda r: (
+                bool(r["disqualified"]),
+                r["final_time"] if r["final_time"] is not None else float("inf"),
+                r["team_number"],
+            )
+        )
+        return results[: int(limit)]
 
     def save_final_snapshot(self, rows: List[Dict[str, Any]]) -> int:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

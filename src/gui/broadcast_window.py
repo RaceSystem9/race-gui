@@ -117,7 +117,11 @@ class BroadcastWindow(QMainWindow):
         self.team_label.setText(current.get("team_name", "N/A"))
         self.team2_label.setText(self.team_label.text())
         self.team3_label.setText(self.team_label.text())
-        self.rank_round_label.setText("(1차 오전)" if self.controller.current_round == 1 else "(2차 오후)")
+        self.rank_round_label.setText(
+            "(1,2차 합산)"
+            if self.controller.view_mode == self.controller.VIEW_MODE_FINAL
+            else ("(1차 오전)" if self.controller.current_round == 1 else "(2차 오후)")
+        )
         self.team_no_label.setText(str(team_number))
         self.school_label.setText(school_name)
         if state.status == "COUNTDOWN":
@@ -130,13 +134,15 @@ class BroadcastWindow(QMainWindow):
             self.state_label.setText(state.status)
         self._refresh_school_logo(team_number)
         self._refresh_member_info(current)
-        self.lap1_time_label.setText(f"LAP1  {state.lap1_time:05.2f}" if state.lap1_time is not None else "LAP1  -")
         lap_durations = self.controller.get_live_lap_durations()
+        self.lap1_time_label.setText(
+            f"(1) {lap_durations['lap1_time']:05.2f}" if lap_durations["lap1_time"] is not None else "(1) -"
+        )
         self.lap2_time_label.setText(
-            f"LAP2  {lap_durations['lap2_time']:05.2f}" if lap_durations["lap2_time"] is not None else "LAP2  -"
+            f"(2) {lap_durations['lap2_time']:05.2f}" if lap_durations["lap2_time"] is not None else "(2) -"
         )
         self.lap3_time_label.setText(
-            f"LAP3  {lap_durations['lap3_time']:05.2f}" if lap_durations["lap3_time"] is not None else "LAP3  -"
+            f"(3) {lap_durations['lap3_time']:05.2f}" if lap_durations["lap3_time"] is not None else "(3) -"
         )
 
         mission_total_seconds = self._refresh_mission_scores(state)
@@ -206,26 +212,9 @@ class BroadcastWindow(QMainWindow):
 
     def _refresh_ranking_board(self) -> None:
         max_rows = 22
-        raced_rows = self.controller.get_active_leaderboard(limit=max_rows)
-        raced_team_numbers = {int(row.get("team_number", 0) or 0) for row in raced_rows}
-        giveup_rows = [
-            {
-                "team_name": team.get("team_name", "-"),
-                "school": team.get("school", "-"),
-                "final_time": 999,
-                "giveup": True,
-            }
-            for team in self.controller.get_giveup_teams()
-            if int(team.get("number", 0) or 0) not in raced_team_numbers
-        ][:max_rows]
-
         # Give-up teams always occupy the bottom-most rows of the board, even if no
         # other team has raced yet, so they never appear as rank 1.
-        board_rows: List[Optional[Dict[str, Any]]] = [None] * max_rows
-        for index, row in enumerate(raced_rows[: max_rows - len(giveup_rows)]):
-            board_rows[index] = row
-        for offset, row in enumerate(giveup_rows):
-            board_rows[max_rows - len(giveup_rows) + offset] = row
+        board_rows = self.controller.get_ranking_board_rows(max_rows=max_rows)
 
         progress_map = self.controller.get_team_progress_map()
 
