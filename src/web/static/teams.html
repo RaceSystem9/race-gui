@@ -6,25 +6,32 @@
 <title>참가팀 - 레이스 방송 정보</title>
 <link rel="stylesheet" href="/style.css" />
 </head>
-<body>
+<body class="broadcast-page plate-page plate-order">
 <nav class="topnav">
   <a href="/index.html">홈</a>
   <a href="/live.html">실시간 경주</a>
   <a href="/leaderboard.html">순위표</a>
   <a href="/teams.html" class="active">참가팀</a>
+  <a href="/teams-2.html">주행 순서 2</a>
+  <a href="/teams-3.html">주행 순서 3</a>
   <a href="/info.html">안내</a>
   <span id="connStatus" class="conn-status">연결 확인 중...</span>
 </nav>
-<main>
-  <h1>참가팀 현황</h1>
-  <table class="leaderboard">
+<main class="broadcast-main">
+  <section class="broadcast-panel ranking-panel">
+    <div class="neon-line"></div>
+    <header class="broadcast-heading">
+      <span class="brand-mark">KMU <b>국민대학교</b></span>
+      <h1>주행 순서</h1>
+      <span class="event-mark">◆ 자이트론</span>
+    </header>
+  <table class="leaderboard broadcast-table order-table">
     <thead>
-      <tr><th class="rank">번호</th><th>팀명</th><th>학교</th><th>진행 상태</th></tr>
+      <tr><th class="rank">주행 순서</th><th>소속</th><th>팀명</th></tr>
     </thead>
     <tbody id="rows"></tbody>
   </table>
-
-  <footer class="hint">약 0.5초마다 자동 갱신됩니다.</footer>
+  </section>
 </main>
 <script src="/app.js"></script>
 <script>
@@ -37,7 +44,7 @@
     const teams = data.teams || [];
     const progressMap = data.team_progress || {};
     const tbody = document.getElementById("rows");
-    tbody.innerHTML = teams
+    tbody.innerHTML = teams.slice(0, 8)
       .map((team) => {
         const info = progressMap[String(team.number)] || {};
         const status = team.giveup
@@ -47,9 +54,8 @@
             progressPill(info.final_confirmed, "최종 확정");
         return `<tr>
           <td class="rank">${team.number}</td>
-          <td>${escapeHtml(team.team_name)}</td>
           <td>${escapeHtml(team.school)}</td>
-          <td>${status}</td>
+          <td>${escapeHtml(team.team_name)}</td>
         </tr>`;
       })
       .join("");

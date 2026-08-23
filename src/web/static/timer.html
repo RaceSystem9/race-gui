@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Race Timer - Race Control</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body class="timer-page">
+  <main class="timer-overlay" aria-label="Race timer overlay">
+    <div id="raceTime" class="race-time">-</div>
+    <div id="timerTeam" class="timer-team">-</div>
+  </main>
+<script src="/app.js"></script>
+<script>
+  startBroadcastPolling((data) => {
+    const shownTime = data.final_time ?? data.official_elapsed_time ?? data.elapsed_time;
+    const time = data.status === "COUNTDOWN"
+      ? `-${Math.max(0, Number(data.countdown ?? 0))}`
+      : formatSeconds(shownTime, 3);
+    document.getElementById("raceTime").textContent = time;
+    document.getElementById("timerTeam").textContent = (data.team || {}).name || "-";
+  });
+</script>
+</body>
+</html>

@@ -6,44 +6,35 @@
 <title>실시간 경주 - 레이스 방송 정보</title>
 <link rel="stylesheet" href="/style.css" />
 </head>
-<body>
+<body class="broadcast-page plate-page plate-team-result">
 <nav class="topnav">
   <a href="/index.html">홈</a>
   <a href="/live.html" class="active">실시간 경주</a>
   <a href="/leaderboard.html">순위표</a>
   <a href="/teams.html">참가팀</a>
+  <a href="/teams-2.html">주행 순서 2</a>
+  <a href="/teams-3.html">주행 순서 3</a>
   <a href="/info.html">안내</a>
   <span id="connStatus" class="conn-status">연결 확인 중...</span>
 </nav>
-<main>
-  <h2 id="roundTitle">-</h2>
-  <div class="team-title" id="teamTitle">- / -</div>
-  <div class="team-sub" id="teamSub">번호 - · 상태 -</div>
-
-  <div class="grid cols-2" style="margin-top: 24px;">
-    <div class="card">
-      <div id="timer" class="big-timer">00.00</div>
-    </div>
-    <div class="card" style="display:flex; align-items:center; justify-content:center;">
-      <span id="lightBadge" class="light-badge RED">RED</span>
-    </div>
-  </div>
-
-  <div class="lap-row">
-    <div class="lap-chip"><span class="lap-label">LAP 1</span><span id="lap1">-</span></div>
-    <div class="lap-chip"><span class="lap-label">LAP 2</span><span id="lap2">-</span></div>
-    <div class="lap-chip"><span class="lap-label">LAP 3</span><span id="lap3">-</span></div>
-  </div>
-
-  <div class="card" style="margin-top: 18px;">
-    <h2>미션 점수</h2>
-    <div id="missionScores" class="mission-scores">-</div>
-    <div style="margin-top: 10px; color: var(--muted);">
-      최종 기록: <strong id="finalTime">-</strong> · 순위: <strong id="rankValue">-</strong>
-    </div>
-  </div>
-
-  <footer class="hint">약 0.5초마다 자동 갱신됩니다.</footer>
+<main class="broadcast-main">
+  <section class="broadcast-panel">
+    <div class="neon-line"></div>
+    <header class="broadcast-heading">
+      <span class="brand-mark">KMU <b>국민대학교</b></span>
+      <h1 id="roundTitle">1차 주행 결과</h1>
+      <span class="event-mark">◆ 자이트론</span>
+    </header>
+    <div class="mission-title"><span>미션 항목</span><span>벌초</span></div>
+    <div id="missionRows"></div>
+    <div class="mission-total"><span>최종 합계 시간</span><strong id="finalTime">-</strong></div>
+    <div class="neon-line"></div>
+  </section>
+  <section class="broadcast-overlay">
+    <div id="timer" class="overlay-time">-</div>
+    <div id="teamTitle" class="overlay-team">-</div>
+    <div id="teamSub" hidden></div>
+  </section>
 </main>
 <script src="/app.js"></script>
 <script>
@@ -56,10 +47,10 @@
   };
 
   startBroadcastPolling((data) => {
-    document.getElementById("roundTitle").textContent = `[${data.view_mode_title || "-"}] 진행 상태`;
+    document.getElementById("roundTitle").textContent = `${data.view_mode_title || "1차"} 주행 결과`;
 
     const team = data.team || {};
-    document.getElementById("teamTitle").textContent = `#${team.number ?? "-"} ${team.name ?? "-"}`;
+    document.getElementById("teamTitle").textContent = team.name ?? "-";
     document.getElementById("teamSub").textContent = `${team.school ?? "-"} · 상태 ${data.status ?? "-"}`;
 
     const timerEl = document.getElementById("timer");
@@ -72,24 +63,13 @@
       timerEl.classList.remove("countdown");
     }
 
-    const lightBadge = document.getElementById("lightBadge");
-    const light = data.traffic_light || "RED";
-    lightBadge.textContent = light;
-    lightBadge.className = `light-badge ${light}`;
-
-    const laps = data.lap_times || {};
-    document.getElementById("lap1").textContent = formatSeconds(laps.lap1_time);
-    document.getElementById("lap2").textContent = formatSeconds(laps.lap2_time);
-    document.getElementById("lap3").textContent = formatSeconds(laps.lap3_time);
-
     const scores = data.mission_scores || {};
     const scoreHtml = Object.entries(MISSION_LABELS)
-      .map(([key, label]) => `<span class="mission-chip">${label}: ${escapeHtml(scores[key] ?? 0)}</span>`)
+      .map(([key, label]) => `<div class="mission-row"><span>${label}</span><strong>${escapeHtml(scores[key] ?? 0)}</strong></div>`)
       .join("");
-    document.getElementById("missionScores").innerHTML = scoreHtml;
+    document.getElementById("missionRows").innerHTML = scoreHtml;
 
     document.getElementById("finalTime").textContent = formatSeconds(data.final_time);
-    document.getElementById("rankValue").textContent = data.rank ?? "-";
   });
 </script>
 </body>

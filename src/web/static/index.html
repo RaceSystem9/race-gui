@@ -3,50 +3,49 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>레이스 방송 정보 - 홈</title>
+<title>Race Control - Master</title>
 <link rel="stylesheet" href="/style.css" />
 </head>
-<body>
+<body class="master-page">
 <nav class="topnav">
-  <a href="/index.html" class="active">홈</a>
+  <a href="/index.html" class="active">마스터</a>
+  <a href="/schedule.html">본선 일정</a>
   <a href="/live.html">실시간 경주</a>
   <a href="/leaderboard.html">순위표</a>
   <a href="/teams.html">참가팀</a>
   <a href="/info.html">안내</a>
   <span id="connStatus" class="conn-status">연결 확인 중...</span>
 </nav>
-<main>
-  <h1>레이스 방송 정보</h1>
-  <h2 id="subtitle">현재 진행: -</h2>
-
-  <div class="grid cols-2">
-    <a class="tile" href="/live.html">
-      <div class="tile-title">🏁 실시간 경주</div>
-      <div class="tile-desc">현재 팀, 타이머, Lap 기록을 실시간으로 확인합니다.</div>
-    </a>
-    <a class="tile" href="/leaderboard.html">
-      <div class="tile-title">🏆 순위표</div>
-      <div class="tile-desc">1차 / 2차 / 최종 순위를 확인합니다.</div>
-    </a>
-    <a class="tile" href="/teams.html">
-      <div class="tile-title">👥 참가팀 현황</div>
-      <div class="tile-desc">전체 참가팀의 라운드 진행 상태를 확인합니다.</div>
-    </a>
-    <a class="tile" href="/info.html">
-      <div class="tile-title">ℹ️ 안내</div>
-      <div class="tile-desc">이 페이지 사용 방법을 안내합니다.</div>
-    </a>
-  </div>
-
-  <footer class="hint">약 0.5초마다 자동 갱신됩니다.</footer>
+<main class="master-main">
+  <section class="master-panel">
+    <div class="neon-line"></div>
+    <header class="broadcast-heading">
+      <span class="brand-mark">KMU <b>국민대학교</b></span>
+      <h1>RACE CONTROL</h1>
+      <span class="event-mark">◆ 자이트론</span>
+    </header>
+    <div class="master-links">
+      <a href="/schedule.html"><strong>본선 일정</strong><span>대회 일정</span></a>
+      <a href="/teams.html"><strong>주행 순서</strong><span>전체 참가팀</span></a>
+      <a href="/teams-2.html"><strong>주행 순서 2</strong><span>9번 - 16번 팀</span></a>
+      <a href="/teams-3.html"><strong>주행 순서 3</strong><span>17번 - 22번 팀</span></a>
+      <a href="/live.html"><strong>팀 주행 결과</strong><span>현재 팀 기록</span></a>
+      <a href="/leaderboard.html"><strong>경기 결과</strong><span>1차 · 2차 · 최종 순위</span></a>
+      <a href="/leaderboard-round1.html"><strong>1차 경기 결과</strong><span>1차 순위표</span></a>
+      <a href="/leaderboard-round1.html?page=2"><strong>1차 결과 2</strong><span>9위 - 16위</span></a>
+      <a href="/leaderboard-round1.html?page=3"><strong>1차 결과 3</strong><span>17위 - 22위</span></a>
+      <a href="/leaderboard-round2.html"><strong>2차 경기 결과</strong><span>2차 순위표</span></a>
+      <a href="/leaderboard-round2.html?page=2"><strong>2차 결과 2</strong><span>9위 - 16위</span></a>
+      <a href="/leaderboard-round2.html?page=3"><strong>2차 결과 3</strong><span>17위 - 22위</span></a>
+      <a href="/leaderboard-final.html"><strong>최종 순위</strong><span>최종 순위표</span></a>
+      <a href="/leaderboard-final.html?page=2"><strong>최종 순위 2</strong><span>9위 - 16위</span></a>
+      <a href="/leaderboard-final.html?page=3"><strong>최종 순위 3</strong><span>17위 - 22위</span></a>
+      <a href="/info.html"><strong>레이스 안내</strong><span>방송 화면 안내</span></a>
+          <a href="/replay.html"><strong>REPLAY</strong><span>재생 오버레이</span></a>
+          <a href="/timer.html"><strong>RACE TIMER</strong><span>타이머 오버레이</span></a>
+          <a href="/team-overlay.html"><strong>TEAM OVERLAY</strong><span>팀 소개 오버레이</span></a>
+    </div>
+  </section>
 </main>
-<script src="/app.js"></script>
-<script>
-  startBroadcastPolling((data) => {
-    const subtitle = document.getElementById("subtitle");
-    const teamName = data.team ? data.team.name : "-";
-    subtitle.textContent = `현재 진행: [${data.view_mode_title || "-"}] ${teamName}`;
-  });
-</script>
 </body>
 </html>

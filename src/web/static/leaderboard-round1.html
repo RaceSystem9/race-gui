@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>1차 경기결과 - 레이스 방송 정보</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body class="broadcast-page plate-page plate-round1">
+<main class="broadcast-main">
+  <section class="broadcast-panel ranking-panel">
+    <div class="neon-line"></div>
+    <header class="broadcast-heading"><span class="brand-mark">KMU <b>국민대학교</b></span><h1>1차 경기 결과</h1><span class="event-mark">◆ 자이트론</span></header>
+    <table class="leaderboard broadcast-table"><thead><tr><th class="rank">순위</th><th>소속</th><th>팀명</th><th class="time">총 주행 시간</th></tr></thead><tbody id="rows"></tbody></table>
+  </section>
+</main>
+<script src="/app.js"></script>
+<script>
+  const pageNumber = Math.max(1, Math.min(3, Number(new URLSearchParams(location.search).get("page") || 1)));
+  const pageStart = (pageNumber - 1) * 8;
+  startBroadcastPolling((data) => {
+    const rows = ((data.leaderboards && data.leaderboards.ROUND1) || []).slice(pageStart, pageStart + 8);
+    document.getElementById("rows").innerHTML = rows.map((row, index) => {
+      if (!row || row.team_name === "-") return "";
+      const rank = pageStart + index + 1;
+      const invalid = row.giveup || row.disqualified || row.final_time === null || row.final_time === undefined;
+      const time = row.giveup ? "포기" : invalid ? "실격" : formatSeconds(row.final_time);
+      return `<tr class="${rank <= 3 ? "top-rank" : "regular-rank"}"><td class="rank">${rank}</td><td>${escapeHtml(row.school)}</td><td>${escapeHtml(row.team_name)}</td><td class="time">${time}</td></tr>`;
+    }).join("");
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Team Overlay - Race Control</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body class="team-overlay-page">
+  <main class="team-lower-third" aria-label="Current team overlay">
+    <div class="team-badge">KMU</div>
+    <strong id="overlayTeamName">-</strong>
+    <span id="overlaySchool">-</span>
+  </main>
+<script src="/app.js"></script>
+<script>
+  startBroadcastPolling((data) => {
+    const team = data.team || {};
+    document.getElementById("overlayTeamName").textContent = team.name || "-";
+    document.getElementById("overlaySchool").textContent = team.school || "-";
+  });
+</script>
+</body>
+</html>
