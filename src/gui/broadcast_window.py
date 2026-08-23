@@ -104,7 +104,7 @@ class BroadcastWindow(QMainWindow):
         team_number = int(current.get("number", 0) or 0)
         team_name = current.get("team_name", "N/A")
         school_name = current.get("school", "N/A")
-        # Keep the main broadcast clock running while race is active.
+        # Broadcast clock stays at 0.0 while racing and only reveals the final time at the end.
         if state.status == "FINISHED":
             race_elapsed = (
                 state.final_time
@@ -112,7 +112,7 @@ class BroadcastWindow(QMainWindow):
                 else (state.official_elapsed_time if state.official_elapsed_time is not None else state.elapsed_time)
             )
         else:
-            race_elapsed = state.elapsed_time
+            race_elapsed = 0.0
 
         self.team_label.setText(current.get("team_name", "N/A"))
         self.team2_label.setText(self.team_label.text())

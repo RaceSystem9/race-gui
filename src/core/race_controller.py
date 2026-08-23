@@ -28,7 +28,7 @@ class RaceController(QObject):
     VIEW_MODE_ROUND2 = "ROUND2"
     VIEW_MODE_FINAL = "FINAL"
     MAX_LAPS = 3
-    MIN_LAP_INTERVAL_SECONDS = 10.0
+    MIN_LAP_INTERVAL_SECONDS = 5.0  # must match race-server's MIN_LAP_INTERVAL_MS
     PI_STATUS_STALE_SECONDS = 15.0
 
     def __init__(
@@ -63,7 +63,6 @@ class RaceController(QObject):
         self.final_snapshot_id = int(latest_snapshot["id"]) if latest_snapshot else None
         self._run_finalized = False
         self._loaded_lap_durations: Optional[Dict[str, Optional[float]]] = None
-        self._official_timer_base_ms: Optional[float] = None
         # Serializes SQLite access between the Qt main thread and the web broadcast
         # server's background thread (the connection is shared, not per-thread).
         self.db_lock = threading.Lock()
@@ -178,7 +177,6 @@ class RaceController(QObject):
         self.state.timer_running = False
         self.state.elapsed_time = 0.0
         self.state.official_elapsed_time = None
-        self._official_timer_base_ms = None
         self.state.lap = 0
         self.state.lap1_time = None
         self.state.lap2_time = None
@@ -229,7 +227,6 @@ class RaceController(QObject):
         self.state.timer_running = False
         self.state.elapsed_time = 0.0
         self.state.official_elapsed_time = None
-        self._official_timer_base_ms = None
         self.state.lap = 0
         self.state.lap1_time = None
         self.state.lap2_time = None
@@ -257,7 +254,6 @@ class RaceController(QObject):
         self.state.traffic_light = "RED"
         self.state.elapsed_time = 0.0
         self.state.official_elapsed_time = None
-        self._official_timer_base_ms = None
         self.state.lap = 0
         self.state.lap1_time = None
         self.state.lap2_time = None
@@ -284,7 +280,6 @@ class RaceController(QObject):
         self.state.traffic_light = "RED"
         self.state.elapsed_time = 0.0
         self.state.official_elapsed_time = None
-        self._official_timer_base_ms = None
         self.state.lap = 0
         self.state.lap1_time = None
         self.state.lap2_time = None
@@ -367,9 +362,7 @@ class RaceController(QObject):
         changed = self._try_apply_authoritative_elapsed(payload)
 
         if message_type == "gate_trigger":
-            # Gate trigger timestamps come from Raspberry Pi/ROS device timing.
             detected = bool(payload.get("detected", False))
-            timestamp_ms = payload.get("timestamp")
             if detected and self.state.status == "RUNNING" and self.state.timer_running:
                 lap_index_raw = payload.get("lap_index")
                 lap_elapsed_raw = payload.get("lap_elapsed_time")
@@ -386,7 +379,7 @@ class RaceController(QObject):
                         if not self._is_lap_interval_valid(lap_elapsed):
                             return
                         self.state.lap = lap_index
-                        self.state.official_elapsed_time = lap_elapsed
+                        self._sync_elapsed_clock(lap_elapsed)
                         changed = True
                         if lap_index == 1:
                             self.state.lap1_time = lap_elapsed
@@ -395,27 +388,9 @@ class RaceController(QObject):
                         elif lap_index == 3:
                             self.state.lap3_time = lap_elapsed
                 else:
-                    # Fallback when server is old and does not send lap metadata.
-                    if timestamp_ms is not None:
-                        changed = self._set_official_elapsed_from_gate_timestamp(timestamp_ms) or changed
-
-                    race_elapsed = self.state.official_elapsed_time
-                    if race_elapsed is None:
-                        race_elapsed = self.state.elapsed_time
-                    race_elapsed = round(float(race_elapsed), 2)
-
-                    if not self._is_lap_interval_valid(race_elapsed):
-                        return
-
-                    self.state.lap = min(self.MAX_LAPS, int(self.state.lap) + 1)
-                    changed = True
-
-                    if self.state.lap == 1:
-                        self.state.lap1_time = race_elapsed
-                    elif self.state.lap == 2:
-                        self.state.lap2_time = race_elapsed
-                    elif self.state.lap == 3:
-                        self.state.lap3_time = race_elapsed
+                    # race-server omits lap metadata when it already rejected this trigger
+                    # (too-short interval, timer inactive, or run already finished); nothing to do.
+                    pass
 
                 if self.state.lap >= self.MAX_LAPS:
                     self._auto_stop_after_last_lap()
@@ -455,7 +430,7 @@ class RaceController(QObject):
             if seconds < 0:
                 continue
             if self.state.official_elapsed_time != seconds:
-                self.state.official_elapsed_time = seconds
+                self._sync_elapsed_clock(seconds)
                 return True
             return False
 
@@ -477,29 +452,16 @@ class RaceController(QObject):
             return False
         if self.state.official_elapsed_time == seconds:
             return False
+        self._sync_elapsed_clock(seconds)
+        return True
+
+    def _sync_elapsed_clock(self, seconds: float) -> None:
+        # race-server's clock is authoritative; re-sync our locally ticking stopwatch
+        # to it whenever fresh timing data (lap trigger, status update) arrives so the
+        # two clocks don't drift apart between syncs.
         self.state.official_elapsed_time = seconds
-        return True
-
-    def _set_official_elapsed_from_gate_timestamp(self, value: Any) -> bool:
-        try:
-            timestamp_ms = float(value)
-        except (TypeError, ValueError):
-            return False
-
-        if timestamp_ms < 0:
-            return False
-
-        if self._official_timer_base_ms is None:
-            self._official_timer_base_ms = timestamp_ms
-            elapsed_seconds = 0.0
-        else:
-            elapsed_seconds = max(0.0, (timestamp_ms - self._official_timer_base_ms) / 1000.0)
-
-        elapsed_seconds = round(elapsed_seconds, 2)
-        if self.state.official_elapsed_time == elapsed_seconds:
-            return False
-        self.state.official_elapsed_time = elapsed_seconds
-        return True
+        if self.state.timer_running:
+            self.state.elapsed_time = seconds
 
     def get_ws_endpoint(self) -> tuple[str, int]:
         return self.websocket_client.host, int(self.websocket_client.port)
@@ -734,7 +696,6 @@ class RaceController(QObject):
             self.state.timer_running = False
             self.state.elapsed_time = 0.0
             self.state.official_elapsed_time = None
-            self._official_timer_base_ms = None
             self.state.lap = 0
             self.state.lap1_time = None
             self.state.lap2_time = None
