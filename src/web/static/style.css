@@ -19,31 +19,32 @@
   box-sizing: border-box;
 }
 
+    --section-background: #000;
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: var(--bg);
+    background: var(--section-background);
   color: var(--text);
-  font-family: "Pretendard", "Malgun Gothic", "Segoe UI", sans-serif;
+  font-family: "Pretendard Local", "Malgun Gothic", "Segoe UI", sans-serif;
 }
 
 nav.topnav {
-  display: flex;
+    background: var(--section-background); 
   align-items: center;
   gap: 4px;
   padding: 10px 16px;
   background: var(--panel);
-  border-bottom: 1px solid var(--border);
+    background: var(--section-background); 
   flex-wrap: wrap;
 }
 
 nav.topnav a {
-  color: var(--muted);
+    background: var(--section-background); 
   text-decoration: none;
   padding: 8px 14px;
   border-radius: 6px;
-  font-weight: 600;
+    background: var(--section-background); 
   font-size: 15px;
 }
 
@@ -52,7 +53,7 @@ nav.topnav a:hover {
   color: var(--text);
 }
 
-nav.topnav a.active {
+    background: var(--section-background); 
   background: var(--accent);
   color: #fff;
 }
@@ -296,4 +297,691 @@ footer.hint {
   font-size: 13px;
   margin-top: 24px;
   text-align: center;
+}
+
+@font-face {
+  font-family: "Gmarket Sans";
+  src: url("/fonts/GmarketSansTTFMedium.ttf") format("truetype");
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "Gmarket Sans";
+  src: url("/fonts/GmarketSansTTFLight.ttf") format("truetype");
+  font-weight: 300;
+}
+
+@font-face {
+  font-family: "Gmarket Sans";
+  src: url("/fonts/GmarketSansTTFBold.ttf") format("truetype");
+  font-weight: 700;
+}
+
+@font-face {
+  font-family: "Pretendard Local";
+  src: url("/fonts/Pretendard-Regular.woff2") format("woff2");
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Pretendard Local";
+  src: url("/fonts/Pretendard-Bold.woff2") format("woff2");
+  font-weight: 700;
+}
+
+@font-face {
+  font-family: "Pretendard Local";
+  src: url("/fonts/Pretendard-Black.woff2") format("woff2");
+  font-weight: 900;
+}
+
+@font-face {
+  font-family: "Pretendard Local";
+  src: url("/fonts/Pretendard-Light.woff2") format("woff2");
+  font-weight: 300;
+}
+
+body.broadcast-page {
+  overflow: hidden;
+  background: #000;
+  font-family: "Pretendard Local", "Malgun Gothic", sans-serif;
+}
+
+body.broadcast-page .topnav { display: none; }
+body.master-page .topnav { display: none; }
+
+.plate-page .broadcast-panel, .plate-page .master-panel {
+  width: 100vw;
+  height: 100vh;
+  flex: none;
+  background-color: transparent;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  box-shadow: none;
+}
+.plate-page .broadcast-main { padding: 0; display: block; }
+.plate-page .broadcast-panel {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+}
+.plate-page .neon-line { visibility: hidden; }
+.plate-order .broadcast-heading,
+.plate-round1 .broadcast-heading,
+.plate-final .broadcast-heading { visibility: hidden; }
+.plate-order .broadcast-table,
+.plate-round1 .broadcast-table {
+  position: absolute;
+  top: 26.5vh;
+  left: 21.3vw;
+  width: 57.4vw;
+}
+.plate-order .broadcast-table thead,
+.plate-round1 .broadcast-table thead { visibility: hidden; }
+.plate-order .broadcast-table th,
+.plate-order .broadcast-table td,
+.plate-round1 .broadcast-table th,
+.plate-round1 .broadcast-table td { border-bottom: 0; }
+.plate-order .broadcast-table tbody tr,
+.plate-round1 .broadcast-table tbody tr { height: 6.4vh; }
+.plate-order .broadcast-table,
+.plate-round1 .broadcast-table { font-size: 1.15vw !important; line-height: 1; }
+.plate-order .broadcast-table td,
+.plate-round1 .broadcast-table td {
+  vertical-align: middle;
+  white-space: nowrap;
+  font-family: "Pretendard Local", sans-serif;
+  font-weight: 900;
+  line-height: 1;
+}
+.plate-team-result .broadcast-heading {
+  position: absolute;
+  top: 14.1vh;
+  left: 29.1vw;
+  width: 41vw;
+  height: 7.7vh;
+  padding: 0;
+  background: transparent;
+}
+.plate-team-result .broadcast-heading .brand-mark,
+.plate-team-result .broadcast-heading .event-mark { display: none; }
+.plate-team-result .broadcast-heading h1 { color: #fff; font-size: 2.55vw; }
+.plate-team-result .mission-title { position: absolute; top: 24.8vh; left: 21.3vw; width: 57.4vw; }
+.plate-team-result #missionRows { position: absolute; top: 31.2vh; left: 21.3vw; width: 57.4vw; }
+.plate-team-result .mission-total { position: absolute; top: 81.8vh; left: 21.3vw; width: 57.4vw; }
+.plate-team-result .mission-row { min-height: 6.4vh; border-bottom: 0; }
+.plate-team-result .mission-title,
+.plate-team-result .mission-row { font-family: "Pretendard Local", sans-serif; font-size: 1.05vw; line-height: 1; }
+.plate-team-result .mission-title { font-family: "Pretendard Local", sans-serif; }
+.plate-team-result .mission-total { font-family: "Pretendard Local", sans-serif; font-size: 1.05vw; line-height: 1; }
+.plate-order .broadcast-panel { background-image: url("/plates/order.png"); }
+.plate-team-result .broadcast-panel { background-image: url("/plates/team-result.png"); }
+.plate-round1 .broadcast-panel { background-image: url("/plates/round1.png"); }
+.plate-final .broadcast-panel { background-image: url("/plates/final.png"); }
+.plate-round2 .broadcast-panel { background-image: url("/background.png"); }
+.plate-round2 .broadcast-heading { position: absolute; top: 14.1vh; left: 21.3vw; width: 57.4vw; height: 7.7vh; padding: 0; background: transparent; }
+.plate-round2 .broadcast-heading .brand-mark, .plate-round2 .broadcast-heading .event-mark { visibility: hidden; }
+.plate-round2 .broadcast-heading h1 { font-size: 2.55vw; }
+.plate-round2 .broadcast-table { position: absolute; top: 26.5vh; left: 21.3vw; width: 57.4vw; font-size: 1.15vw !important; line-height: 1; }
+.plate-round2 .broadcast-table th, .plate-round2 .broadcast-table td { border-bottom: 0; vertical-align: middle; white-space: nowrap; }
+.plate-round2 .broadcast-table tbody tr { height: 6.4vh; }
+.plate-page .neon-line { visibility: hidden; }
+
+.replay-page { overflow: hidden; background: #000; }
+.replay-overlay { position: fixed; left: 15px; bottom: 12px; width: 193px; height: 88px; padding: 6px 8px 8px; border-radius: 14px; background: #100c29; box-shadow: 0 5px 0 #fff, 0 0 14px rgba(255, 0, 127, .32); }
+.replay-label { height: 39px; padding-left: 16px; color: #fff; font-family: "Pretendard Local", sans-serif; font-size: 34px; font-weight: 900; line-height: 39px; }
+.replay-team { height: 32px; margin: 0 3px; border-radius: 7px; background: linear-gradient(90deg, #00ffff, #f3dcff 48%, #ff007f); color: #fff; font-family: "Pretendard Local", sans-serif; font-size: 15px; font-weight: 700; line-height: 32px; text-align: center; }
+.timer-page { overflow: hidden; background: #000; }
+.timer-overlay { position: fixed; left: 24px; top: 23px; width: 193px; height: 91px; padding: 4px 8px 8px; border-radius: 14px; background: #100c29; box-shadow: 0 5px 0 #fff, 0 0 14px rgba(255, 0, 127, .32); }
+.race-time { height: 40px; color: #fff; font-family: "Pretendard Local", sans-serif; font-size: 34px; font-weight: 900; line-height: 40px; text-align: center; }
+.timer-team { height: 32px; margin: 0 3px; border-radius: 7px; background: linear-gradient(90deg, #00ffff, #f3dcff 48%, #ff007f); color: #20172b; font-family: "Pretendard Local", sans-serif; font-size: 15px; font-weight: 700; line-height: 32px; text-align: center; }
+.team-overlay-page { overflow: hidden; background: #000; }
+.team-lower-third { position: fixed; left: 50%; bottom: 28px; display: grid; grid-template-columns: 54px 1fr auto; align-items: center; gap: 14px; width: min(520px, 72vw); height: 76px; padding: 8px 20px 8px 14px; transform: translateX(-50%); border: 7px solid transparent; border-radius: 20px; background: linear-gradient(#100c29, #100c29) padding-box, linear-gradient(90deg, #00ffff, #d8e5ff 50%, #ff007f) border-box; box-shadow: 0 0 15px rgba(0, 255, 255, .32), 0 0 18px rgba(255, 0, 127, .3); }
+.team-badge { display: grid; place-items: center; width: 40px; height: 40px; border: 2px solid #00ffff; border-radius: 50%; color: #00ffff; font-size: 10px; font-weight: 900; }
+.team-lower-third strong { color: #ff9418; font-family: "Gmarket Sans", sans-serif; font-size: 32px; font-weight: 700; }
+.team-lower-third span { color: #fff; font-size: 18px; font-weight: 900; white-space: nowrap; }
+
+.broadcast-main {
+  min-height: 100vh;
+  max-width: none;
+  padding: 7vh 10vw;
+  display: grid;
+  place-items: center;
+  background: #000;
+}
+
+.master-page { background: #000; }
+.master-main { min-height: 100vh; max-width: none; padding: 7vh 10vw; display: grid; place-items: center; background: #000; }
+.master-panel { width: min(860px, 82vw); overflow: hidden; border-radius: 16px; background: rgba(13, 10, 32, .98); box-shadow: 0 0 24px rgba(0, 247, 255, .3), 0 0 30px rgba(255, 22, 141, .35); }
+.master-links { display: grid; grid-template-columns: 1fr; }
+.master-links a { display: grid; grid-template-columns: 1fr 1fr; align-items: center; min-height: 58px; padding: 10px 34px; border-bottom: 1px solid #5e596d; color: #fff; text-decoration: none; transition: background .2s; }
+.master-links a:hover { background: #171331; }
+.master-links strong { color: #ff9418; font-family: "Gmarket Sans", sans-serif; font-size: 20px; }
+.master-links span { color: #fff; font-size: 18px; text-align: center; }
+
+.broadcast-panel {
+  width: min(860px, 82vw);
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgba(13, 10, 32, .98);
+  box-shadow: 0 0 24px rgba(0, 247, 255, .3), 0 0 30px rgba(255, 22, 141, .35);
+}
+
+.neon-line {
+  height: 7px;
+  margin: 14px 30px 10px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #00ffff, #eee7ff 45%, #ff007f);
+  box-shadow: 0 0 9px #00ffff, 0 0 9px #ff007f;
+}
+
+.broadcast-heading {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  height: 74px;
+  padding: 0 28px;
+  background: #fff;
+  color: #29272c;
+}
+
+.broadcast-heading h1 {
+  margin: 0;
+  color: #ff9418;
+  font-family: "Gmarket Sans", sans-serif;
+  font-size: 34px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.brand-mark, .event-mark { font-size: 16px; font-weight: 700; }
+.event-mark { text-align: right; }
+.brand-mark b { margin-left: 5px; }
+.schedule-rows > div { display: grid; grid-template-columns: 1fr 1fr; padding: 11px 34px; border-bottom: 1px solid #5e596d; color: #fff; font-size: 20px; font-weight: 900; }
+.schedule-rows span { text-align: center; }
+.broadcast-table { font-size: 20px !important; }
+.broadcast-table th, .broadcast-table td { padding: 11px 14px !important; text-align: center !important; }
+.broadcast-table th { color: #fff !important; font-size: 20px !important; text-transform: none !important; letter-spacing: 0 !important; }
+.broadcast-table tr.top-rank td { color: #ff007f; font-weight: 900; }
+.broadcast-table tr.regular-rank td { color: #00ffff; font-weight: 900; }
+.broadcast-table tr.giveup td { color: var(--muted); }
+.mission-title, .mission-row, .mission-total { display: grid; grid-template-columns: 1fr 1fr; }
+.mission-title { padding: 13px 34px; border-bottom: 3px solid #ff007f; color: #00ffff; font-size: 22px; font-weight: 700; }
+.mission-title span:last-child, .mission-row strong, .mission-total strong { text-align: center; }
+.mission-title span:last-child { color: #ff007f; }
+.mission-row { padding: 12px 34px; border-bottom: 1px solid #5e596d; color: #eeeaf4; font-size: 20px; font-weight: 300; }
+.mission-row strong { font-weight: 300; }
+.mission-total { padding: 13px 34px 5px; color: #ff9418; font-size: 20px; font-weight: 900; }
+.info-copy { padding: 30px 34px; color: #fff; font-size: 20px; font-weight: 300; line-height: 1.8; text-align: center; }
+.info-copy p { margin: 0; }
+.broadcast-overlay { position: fixed; left: 24px; bottom: 24px; min-width: 185px; padding: 7px 14px 10px; border-radius: 13px; background: #100c29; box-shadow: 0 5px 0 #fff, 0 0 15px rgba(255,0,127,.35); text-align: center; }
+.overlay-time { color: #fff; font-size: 34px; font-weight: 900; line-height: 1; }
+.overlay-team { margin-top: 7px; padding: 6px 10px; border-radius: 7px; background: linear-gradient(90deg, #00ffff, #f3dcff 48%, #ff007f); color: #20172b; font-weight: 900; }
+.ranking-panel { padding-bottom: 14px; }
+.ranking-panel .tabs { display: none; }
+.order-table { display: block; }
+.order-table thead, .order-table tbody { display: block; }
+.order-table thead tr, .order-table tbody tr { display: grid; grid-template-columns: 20% 43% 37%; }
+.order-table tbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.order-table th, .order-table td { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 700px) {
+  .master-main { padding: 3vh 3vw; }
+  .master-links a { min-height: 46px; padding: 8px 15px; }
+  .master-links strong { font-size: 14px; }
+  .master-links span { font-size: 13px; }
+  .broadcast-main { padding: 3vh 3vw; }
+  .broadcast-heading { height: 58px; padding: 0 12px; }
+  .broadcast-heading h1 { font-size: 24px; }
+  .brand-mark, .event-mark { font-size: 10px; }
+  .schedule-rows > div, .mission-row, .mission-total { padding: 9px 15px; font-size: 13px; }
+  .info-copy { padding: 20px 15px; font-size: 13px; }
+  .broadcast-table { font-size: 13px !important; }
+  .broadcast-table th { font-size: 13px !important; }
+  .order-table th, .order-table td { padding: 7px 3px !important; }
+}
+
+body.broadcast-page {
+  background: transparent;
+}
+
+.broadcast-main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 0;
+}
+
+
+.broadcast-panel {
+  position: relative;
+  width: 65vw;
+  min-height: 55vh;
+  border-radius: 16px;
+  background: rgba(13, 10, 32, 0.9);
+  
+ 
+  border: 4px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 
+    -12px 12px 30px rgba(0, 255, 255, 0.35), 
+    12px -12px 30px rgba(255, 0, 127, 0.35);
+  display: flex;
+  flex-direction: column;
+}
+
+
+.broadcast-panel::before {
+  content: "";
+  position: absolute;
+  top: -4px; right: -4px; bottom: -4px; left: -4px;
+  z-index: -1;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #00ffff 0%, #00ffff 30%, #ff007f 70%, #ff007f 100%);
+}
+
+
+.broadcast-heading {
+  background: #ffffff;
+  border-radius: 12px 12px 0 0;
+  height: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 40px;
+  visibility: visible !important;
+  position: relative;
+  top: auto;
+  left: auto;
+  width: 100%;
+}
+
+.broadcast-heading h1 {
+  color: #ff9418;
+  font-family: "Gmarket Sans", sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+  flex: 1;
+}
+
+
+.brand-mark, .event-mark {
+  font-size: 18px;
+  color: #000;
+  display: block !important;
+  visibility: visible !important;
+}
+
+
+.neon-line {
+  display: none;
+}
+
+
+.broadcast-table {
+  width: 90%;
+  margin: 20px auto;
+  font-size: 22px !important;
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+}
+
+
+.broadcast-table th {
+  color: #ff9418 !important;
+  font-weight: 700;
+  border-bottom: 2px solid #5e596d !important;
+  padding-bottom: 15px !important;
+}
+
+
+.broadcast-table tbody tr {
+  height: 55px !important;
+}
+
+
+.broadcast-table tr.top-rank td {
+  color: #ff007f !important; 
+  font-weight: 900;
+}
+.broadcast-table tr.regular-rank td {
+  color: #00ffff !important;
+  font-weight: 900;
+}
+
+
+.plate-team-result .broadcast-heading h1 {
+  color: #ff007f !important;
+}
+
+.plate-team-result .mission-title, 
+.plate-team-result #missionRows, 
+.plate-team-result .mission-total {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  width: 90% !important;
+  margin: 0 auto !important;
+}
+
+.plate-team-result .mission-title {
+  border-bottom: 2px solid #ff007f;
+  margin-top: 20px !important;
+  padding-bottom: 10px !important;
+}
+
+.plate-team-result .mission-title span:first-child { color: #00ffff; font-size: 24px; }
+.plate-team-result .mission-title span:last-child { color: #ff007f; font-size: 24px; }
+
+.plate-team-result .mission-row {
+  border-bottom: 1px solid #5e596d;
+  min-height: 55px !important;
+  font-size: 22px !important;
+  align-items: center;
+}
+
+.plate-team-result .mission-total {
+  margin-top: 20px !important;
+  border-top: 2px solid #ff9418;
+  padding-top: 20px !important;
+  font-size: 26px !important;
+}
+.plate-team-result .mission-total strong { color: #ff9418; }
+
+
+.broadcast-table {
+  table-layout: fixed;
+  width: 90%;
+  margin: 20px auto;
+  border-collapse: collapse;
+}
+
+/* =========================================================
+   배경 이미지 칸에 텍스트 위치 맞추기 (미세 조정용 코드)
+   ========================================================= */
+
+/* 1. 테이블 전체의 시작 위치(상하좌우) 및 전체 너비 맞추기 */
+.plate-order .broadcast-table,
+.plate-round1 .broadcast-table,
+.plate-round2 .broadcast-table,
+.plate-final .broadcast-table {
+  position: absolute !important;
+  /* 아래 숫자들을 배경 이미지에 맞게 조금씩 수정하세요 */
+  top: 30.5vh !important;    /* 표의 시작 높이 (숫자를 키우면 글자가 아래로 내려감) */
+  left: 21.3vw !important;   /* 표의 왼쪽 여백 (숫자를 키우면 글자가 오른쪽으로 이동) */
+  width: 57.4vw !important;  /* 표의 전체 너비 */
+}
+
+/* 2. 각 줄(행)의 높이 맞추기 (배경 칸의 세로 간격) */
+.plate-order .broadcast-table tbody tr,
+.plate-round1 .broadcast-table tbody tr,
+.plate-round2 .broadcast-table tbody tr,
+.plate-final .broadcast-table tbody tr { 
+  /* 배경 이미지의 한 줄 높이에 맞게 숫자를 조절하세요 */
+  height: 6.4vh !important; 
+}
+
+/* 3. 각 열(칸)의 너비 비율 및 가운데 정렬 맞추기 (배경 칸의 가로선) */
+.broadcast-table td {
+  text-align: center !important; /* 모든 글자를 칸의 가운데로 정렬 */
+  vertical-align: middle !important;
+}
+
+/* 배경 이미지에 그려진 세로선 위치에 맞게 각 퍼센트(%) 비율을 조절하세요 (합계 100%) */
+.broadcast-table td:nth-child(1) { width: 18% !important; } /* 1열: 주행 순서 */
+.broadcast-table td:nth-child(2) { width: 32% !important; } /* 2열: 소속 */
+.broadcast-table td:nth-child(3) { width: 25% !important; } /* 3열: 팀명 */
+.broadcast-table td:nth-child(4) { width: 25% !important; } /* 4열: 기록 */
+
+/* =========================================================
+   공통 테이블 기본 규격 (폰트, 정렬, 선 굵기)
+   ========================================================= */
+.broadcast-table {
+  width: 90% !important;
+  margin: 0 auto !important;
+  border-collapse: collapse !important;
+  font-family: 'GmarketSans', 'Noto Sans KR', sans-serif !important; /* 방송용 굵은 폰트 */
+  font-size: 22px !important;
+  font-weight: 700 !important;
+}
+
+.broadcast-table th, 
+.broadcast-table td {
+  text-align: center !important;
+  vertical-align: middle !important;
+  padding: 12px 10px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important; /* 얇은 반투명 가로선 */
+}
+
+/* =========================================================
+   1. 주행 순서 (Image 1: image_bec164.jpg)
+   - 헤더: 주황색 (#ff9800)
+   - 내용: 흰색 (#ffffff)
+   ========================================================= */
+.plate-order .broadcast-table th {
+  color: #ff9800 !important;
+}
+
+.plate-order .broadcast-table td {
+  color: #ffffff !important;
+}
+
+/* =========================================================
+   2. 아주숭한 INFO - 1차 주행 결과 (Image 2: image_bec182.jpg)
+   - 헤더 (미션 항목): 시안색 (#00ffff)
+   - 헤더 (벌초): 마젠타색 (#ff007f)
+   - 내용 (1~6행): 흰색 (#ffffff)
+   - 마지막 행 (최종 합계 시간): 주황색 (#ff9800)
+   ========================================================= */
+.plate-team-result .broadcast-table th:nth-child(1) {
+  color: #00ffff !important; 
+}
+.plate-team-result .broadcast-table th:nth-child(2) {
+  color: #ff007f !important;
+}
+
+.plate-team-result .broadcast-table td {
+  color: #ffffff !important;
+}
+
+/* 마지막 '최종 합계 시간' 줄 글자색 강조 */
+.plate-team-result .broadcast-table tr:last-child td {
+  color: #ff9800 !important;
+  font-weight: 900 !important;
+}
+
+/* =========================================================
+   3. 경기 결과 (Image 3: image_bec189.jpg)
+   - 헤더: 흰색 (#ffffff)
+   - 1~3위 (1~3행): 마젠타색 (#ff007f)
+   - 4~8위 (4~8행): 시안색 (#00ffff)
+   ========================================================= */
+.plate-final .broadcast-table th {
+  color: #ffffff !important;
+}
+
+/* 1위 ~ 3위 데이터 줄 색상 */
+.plate-final .broadcast-table tbody tr:nth-child(-n+3) td {
+  color: #ff007f !important; 
+}
+
+/* 4위 이하 데이터 줄 색상 */
+.plate-final .broadcast-table tbody tr:nth-child(n+4) td {
+  color: #00ffff !important;
+}
+/* =========================================================
+   1. 각 페이지별 배경 이미지 지정 (제공해주신 파일명 매칭)
+   ========================================================= */
+/* ※ 파일이 css 파일과 같은 폴더에 있다고 가정. 다를 경우 경로(url) 수정 필요 */
+body.broadcast-page {
+  background-color: transparent;
+}
+
+.plate-schedule { background-image: url("본선일정_cut.png"); }
+.plate-order    { background-image: url("이미지_주행순서_cut.png"); }
+.plate-round1   { background-image: url("이미지_1차경기결과_cut.png"); }
+.plate-round2   { background-image: url("이미지_경기순위_cut.png"); }
+.plate-final    { background-image: url("이미지_최종경기결과_cut.png"); }
+.plate-team-result { background-image: url("이미지_주행결과_cut.png"); }
+
+/* 이미지 크기를 화면에 꽉 차게 맞춤 */
+.plate-page {
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  width: 100vw;
+  height: 100vh;
+  position: relative; /* 자식 요소 절대 배치를 위한 기준점 */
+}
+
+/* =========================================================
+   2. 기존 HTML 텍스트 중 불필요한 부분 숨기기
+   ========================================================= */
+/* 이미지에 이미 상단 헤더와 로고가 있으므로 HTML 헤더는 숨깁니다 */
+.broadcast-heading, 
+.broadcast-table thead {
+  display: none !important; 
+}
+
+/* =========================================================
+   3. 테이블 데이터 위치 및 간격 맞추기 (핵심 규격)
+   ========================================================= */
+.broadcast-table {
+  position: absolute !important;
+  /* 📍 표 전체의 시작 위치 조정 (아래 두 수치를 이미지에 맞게 조금씩 수정하세요) */
+  top: 30vh !important;  
+  left: 9.5vw !important;  
+  
+  width: 81vw !important; /* 표의 전체 가로 너비 */
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  margin: 0 !important;
+}
+
+/* 📍 각 줄(데이터 칸)의 세로 높이 설정 (배경 선 간격에 맞게 수정하세요) */
+.broadcast-table tr {
+  height: 5vh !important; 
+}
+
+/* 각 칸(데이터) 폰트 및 정렬 설정 */
+.broadcast-table td {
+  text-align: center !important;
+  vertical-align: middle !important;
+  font-family: 'GmarketSans', 'Noto Sans KR', sans-serif !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  border: none !important; /* 이미지에 선이 있으므로 테두리 제거 */
+  padding: 0 10px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+/* =========================================================
+   4. 열(칸) 너비 비율 맞추기
+   ========================================================= */
+/* 배경 이미지의 선 위치에 맞춰 퍼센트(%)를 조절하세요 */
+.broadcast-table td:nth-child(1) { width: 15% !important; } /* 순위/순서 */
+.broadcast-table td:nth-child(2) { width: 35% !important; } /* 소속 */
+.broadcast-table td:nth-child(3) { width: 25% !important; } /* 팀명 */
+.broadcast-table td:nth-child(4) { width: 25% !important; } /* 기록 */
+
+/* =========================================================
+   5. 순위별 글자 색상 규격 적용 (이전 요청사항 반영)
+   ========================================================= */
+/* 주행 순서 (전체 흰색) */
+.plate-order .broadcast-table td {
+  color: #ffffff !important;
+}
+
+/* 주행 결과 (벌초, 총합 시간 등 강조) */
+.plate-team-result .broadcast-table td { color: #ffffff !important; }
+.plate-team-result .broadcast-table tr:last-child td {
+  color: #ff9800 !important; /* 마지막 행(최종 합계 시간) 주황색 */
+}
+
+/* 경기 결과 (상위 1~3위 마젠타, 4위 이하 시안) */
+.plate-round1 .broadcast-table tr:nth-child(-n+3) td,
+.plate-round2 .broadcast-table tr:nth-child(-n+3) td,
+.plate-final .broadcast-table tr:nth-child(-n+3) td {
+  color: #ff007f !important; /* 1~3위 */
+}
+
+.plate-round1 .broadcast-table tr:nth-child(n+4) td,
+.plate-round2 .broadcast-table tr:nth-child(n+4) td,
+.plate-final .broadcast-table tr:nth-child(n+4) td {
+  color: #00ffff !important; /* 4위 이하 */
+}
+/* =========================================================
+   글자 잘림 방지 및 한 줄 전체 표기 강제
+   ========================================================= */
+.broadcast-table td {
+  white-space: nowrap !important; /* 줄바꿈 없이 무조건 한 줄로 나열 */
+  overflow: visible !important;   /* 칸 너비를 넘어가더라도 글자가 잘리지 않고 다 보이게 설정 */
+  text-overflow: clip !important; /* 말줄임표(...) 등의 효과 완전 제거 */
+}
+/* =========================================================
+   글자 겹침 방지: 소속(학교명) 칸 너비 확장 및 폰트 크기 최적화
+   ========================================================= */
+
+/* 테이블 전체 폰트 크기를 살짝 줄여서 긴 학교명도 한 줄에 쏙 들어가게 조절 */
+.broadcast-table td {
+  font-size: 20px !important; /* 기존 24px -> 20px로 축소 (필요시 조절) */
+  white-space: nowrap !important;
+  overflow: hidden !important; /* 다시 hidden으로 변경하여 옆칸 침범 방지 */
+  text-overflow: ellipsis !important; /* 너무 길면 끝부분만 '...' 처리 */
+}
+
+/* 📍 열(칸) 너비 비율 재조정 (소속 칸을 최대한 넓게 확보) */
+.broadcast-table td:nth-child(1) { width: 12% !important; } /* 1열: 순위/순서 (최소화) */
+.broadcast-table td:nth-child(2) { width: 43% !important; } /* 2열: 소속 (가장 넓게 확보) */
+.broadcast-table td:nth-child(3) { width: 20% !important; } /* 3열: 팀명 */
+.broadcast-table td:nth-child(4) { width: 25% !important; } /* 4열: 기록 */
+
+/* =========================================================
+   주행 순서: 각 줄당 하나의 항목만 정확히 한 줄로 표기 (줄바꿈 방지)
+   ========================================================= */
+.plate-order .broadcast-table td {
+  white-space: nowrap !important;       /* 어떤 경우에도 줄바꿈(엔터) 금지 */
+  word-break: keep-all !important;      /* 단어 중간에 강제로 쪼개져 두 줄이 되는 것 방지 */
+  height: 7vh !important;             /* 배경 선 간격에 맞춘 고정 높이 */
+  line-height: 6vh !important;        /* 글자를 세로 정중앙에 한 줄로 꽉 잡아둠 */
+  overflow: visible !important;         /* 너비가 조금 길어도 잘리지 않고 다 보이게 허용 */
+}
+/* =========================================================
+   행(tr) 가로 배치 방지 및 한 줄에 하나씩 세로로 쌓이도록 강제
+   ========================================================= */
+.broadcast-table tbody {
+  display: table-row-group !important;
+  width: 100% !important;
+}
+
+/* 각 줄(행)이 화면 너비를 모두 차지하게 만들어 옆에 다른 줄이 오지 못하게 차단 */
+.broadcast-table tr {
+  display: table-row !important;
+  width: 100% !important;
+  clear: both !important; /* 혹시 모를 좌우 띄움(float) 속성 해제 */
+}
+
+/* 데이터 셀(칸) 구조 고정 */
+.broadcast-table td {
+  display: table-cell !important;
+  box-sizing: border-box !important;
+}
+/* =========================================================
+   주행 순서 화면만 개별적으로 줄 간격(높이) 조절
+   ========================================================= */
+.plate-order .broadcast-table tr {
+  height: 7.8vh !important; /* 💡 이 숫자를 조절하여 전체 줄 간격을 맞추세요 (예: 7.5, 8.0 등) */
+}
+
+.plate-order .broadcast-table td {
+  height: 5.6vh !important;       /* tr과 똑같은 숫자로 맞춰주세요 */
+  line-height: 5.6vh !important;  /* 글자가 칸의 정중앙에 오도록 똑같이 맞춰주세요 */
 }

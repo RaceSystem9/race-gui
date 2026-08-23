@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>주행 순서 3 - 레이스 방송 정보</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body class="broadcast-page plate-page plate-order">
+<nav class="topnav">
+  <a href="/index.html">마스터</a>
+  <a href="/teams.html">주행 순서 1</a>
+  <a href="/teams-2.html">주행 순서 2</a>
+  <a href="/teams-3.html" class="active">주행 순서 3</a>
+</nav>
+<main class="broadcast-main">
+  <section class="broadcast-panel ranking-panel">
+    <div class="neon-line"></div>
+    <header class="broadcast-heading">
+      <span class="brand-mark">KMU <b>국민대학교</b></span>
+      <h1>주행 순서</h1>
+      <span class="event-mark">◆ 자이트론</span>
+    </header>
+    <table class="leaderboard broadcast-table order-table">
+      <thead><tr><th class="rank">주행 순서</th><th>소속</th><th>팀명</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </section>
+</main>
+<script src="/app.js"></script>
+<script>
+  startBroadcastPolling((data) => {
+    const tbody = document.getElementById("rows");
+    tbody.innerHTML = (data.teams || []).slice(16, 22).map((team) => `<tr>
+      <td class="rank">${team.number}</td>
+      <td>${escapeHtml(team.school)}</td>
+      <td>${escapeHtml(team.team_name)}</td>
+    </tr>`).join("");
+  });
+</script>
+</body>
+</html>

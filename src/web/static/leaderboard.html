@@ -6,31 +6,39 @@
 <title>순위표 - 레이스 방송 정보</title>
 <link rel="stylesheet" href="/style.css" />
 </head>
-<body>
+<body class="broadcast-page plate-page plate-round1">
 <nav class="topnav">
   <a href="/index.html">홈</a>
   <a href="/live.html">실시간 경주</a>
   <a href="/leaderboard.html" class="active">순위표</a>
   <a href="/teams.html">참가팀</a>
+  <a href="/teams-2.html">주행 순서 2</a>
+  <a href="/teams-3.html">주행 순서 3</a>
   <a href="/info.html">안내</a>
   <span id="connStatus" class="conn-status">연결 확인 중...</span>
 </nav>
-<main>
-  <h1>순위표</h1>
+<main class="broadcast-main">
+  <section class="broadcast-panel ranking-panel">
+    <div class="neon-line"></div>
+    <header class="broadcast-heading">
+      <span class="brand-mark">KMU <b>국민대학교</b></span>
+      <h1 id="rankingTitle">경기 결과</h1>
+      <span class="event-mark">◆ 자이트론</span>
+    </header>
   <div class="tabs">
     <button data-mode="ROUND1" class="active">1차</button>
     <button data-mode="ROUND2">2차</button>
     <button data-mode="FINAL">최종</button>
   </div>
 
-  <table class="leaderboard">
+  <table class="leaderboard broadcast-table">
     <thead>
-      <tr><th class="rank">순위</th><th>팀명</th><th>학교</th><th class="time">기록</th></tr>
+      <tr><th class="rank">주행 순서</th><th>소속</th><th>팀명</th><th class="time">총 주행 시간</th></tr>
     </thead>
     <tbody id="rows"></tbody>
   </table>
 
-  <footer class="hint">약 0.5초마다 자동 갱신됩니다.</footer>
+  </section>
 </main>
 <script src="/app.js"></script>
 <script>
@@ -55,10 +63,11 @@
           timeText = formatSeconds(row.final_time);
         }
         const rowClass = isGiveup || isDisqualified ? "giveup" : "";
-        return `<tr class="${rowClass}">
+        const rankClass = index < 3 ? "top-rank" : "regular-rank";
+        return `<tr class="${rowClass} ${rankClass}">
           <td class="rank">${index + 1}</td>
-          <td>${escapeHtml(row.team_name)}</td>
           <td>${escapeHtml(row.school)}</td>
+          <td>${escapeHtml(row.team_name)}</td>
           <td class="time">${timeText}</td>
         </tr>`;
       })
@@ -76,6 +85,10 @@
 
   startBroadcastPolling((data) => {
     latestData = data;
+    currentMode = data.view_mode || currentMode;
+    document.body.classList.toggle("plate-final", currentMode === "FINAL");
+    document.body.classList.toggle("plate-round1", currentMode !== "FINAL");
+    document.getElementById("rankingTitle").textContent = currentMode === "FINAL" ? "최종 경기 결과" : `${data.view_mode_title || "1차"} 경기 결과`;
     renderRows();
   });
 </script>
