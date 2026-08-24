@@ -3,39 +3,24 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>안내 - 레이스 방송 정보</title>
+<title>Race Timer - Race Control</title>
 <link rel="stylesheet" href="/style.css" />
 </head>
-<body class="broadcast-page">
-<nav class="topnav">
-  <a href="/index.html">홈</a>
-  <a href="/live.html">실시간 경주</a>
-  <a href="/leaderboard.html">순위표</a>
-  <a href="/teams.html">참가팀</a>
-  <a href="/teams-2.html">주행 순서 2</a>
-  <a href="/teams-3.html">주행 순서 3</a>
-  <a href="/info.html" class="active">안내</a>
-  <span id="connStatus" class="conn-status">연결 확인 중...</span>
-</nav>
-<main class="broadcast-main">
-  <section class="broadcast-panel info-panel">
-    <div class="neon-line"></div>
-    <header class="broadcast-heading">
-      <span class="brand-mark">KMU <b>국민대학교</b></span>
-      <h1>레이스 안내</h1>
-      <span class="event-mark">◆ 자이트론</span>
-    </header>
-    <div class="info-copy">
-      <p>대회 운영 PC에서 제공하는 실시간 경주 방송 화면입니다.</p>
-      <p>주행 순서, 팀 주행 결과, 경기 결과를 각각의 화면에서 확인할 수 있습니다.</p>
-      <p>화면의 기록과 팀 정보는 약 0.5초마다 자동으로 갱신됩니다.</p>
-    </div>
-    <div class="neon-line"></div>
-  </section>
-</main>
+<body class="timer-page">
+  <main class="timer-overlay" aria-label="Race timer overlay">
+    <div id="raceTime" class="race-time">-</div>
+    <div id="timerTeam" class="timer-team">-</div>
+  </main>
 <script src="/app.js"></script>
 <script>
-  startBroadcastPolling(() => {});
+  startBroadcastPolling((data) => {
+    const shownTime = data.final_time ?? data.official_elapsed_time ?? data.elapsed_time;
+    const time = data.status === "COUNTDOWN"
+      ? `-${Math.max(0, Number(data.countdown ?? 0))}`
+      : formatSeconds(shownTime, 3);
+    document.getElementById("raceTime").textContent = time;
+    document.getElementById("timerTeam").textContent = (data.team || {}).name || "-";
+  });
 </script>
 </body>
 </html>
