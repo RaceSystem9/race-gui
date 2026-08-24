@@ -14,7 +14,7 @@
     width: 100% !important;
     height: 100% !important;
     overflow: auto !important;
-    background-color: #000000 !important;
+    background-color: #00FF00 !important;
   }
 
   /* 1920x1080 고정 컨테이너 (round1.png 적용) */
@@ -186,8 +186,8 @@
     // 데이터 개수 기준 총 페이지 수 계산
     const totalPages = Math.ceil(Math.max(totalItems, 1) / pageSize) || 1;
     
-    if (currentPage < 1) currentPage = 1;
-    if (currentPage > totalPages) currentPage = totalPages;
+    // 페이지 범위 순환 보정
+    currentPage = ((currentPage - 1) % totalPages + totalPages) % totalPages + 1;
 
     const startIdx = (currentPage - 1) * pageSize;
     const pageItems = cachedLeaderboard.slice(startIdx, startIdx + pageSize);
@@ -233,8 +233,8 @@
     tbody.innerHTML = html;
 
     document.getElementById("pageIndicator").innerText = `${currentPage} / ${totalPages} 페이지`;
-    document.getElementById("prevBtn").disabled = (currentPage === 1);
-    document.getElementById("nextBtn").disabled = (currentPage === totalPages);
+    document.getElementById("prevBtn").disabled = false;
+    document.getElementById("nextBtn").disabled = false;
   }
   
   function changePage(direction) {

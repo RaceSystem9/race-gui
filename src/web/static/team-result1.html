@@ -14,7 +14,7 @@
     width: 100% !important;
     height: 100% !important;
     overflow: auto !important;
-    background-color: #000000 !important;
+    background-color: #00FF00 !important;
   }
 
   /* 1920x1080 고정 컨테이너 (team-result.png 적용) */
@@ -68,6 +68,7 @@
     background: #059669;
   }
 
+  /* 활성화된 버튼 (주황색) */
   .nav-btn.active {
     background: #f59e0b;
   }
@@ -95,7 +96,7 @@
   /* 주행결과 컨테이너 및 헤더 */
   .result-display-container {
     position: absolute;
-    top: 235px; /* <--- 230px에서 235px로 변경하여 전체 표를 5px 아래로 이동 */
+    top: 235px;
     left: 410px;
     width: 1100px;
   }
@@ -108,9 +109,7 @@
     font-size: 44px;
     color: #ffffff;
     margin-bottom: 60px;
-
-    /* [상하 위치 조정] 음수(-) 값을 올리면 팀명만 위로 이동합니다 */
-    transform: translateY(-5px); /* 원하는 만큼 숫자를 변경하세요 (예: -10px, -20px) */
+    transform: translateY(-5px);
   }
 
   /* 주행결과 표 (구분선 제거) */
@@ -121,7 +120,7 @@
   }
 
   .result-table tr {
-    height: 69px; /* 배경 이미지 간격 위치 고정 */
+    height: 69px;
   }
 
   /* 기본 셀 스타일 */
@@ -159,18 +158,15 @@
     font-weight: 900;
     font-size: 32px;
     color: #ff9900;
-  
-    /* [상하 위치 조정] 음수(-) 값을 올리면 위로 이동합니다 */
     transform: translateY(-10px); 
   }
 
   /* 3. 최종합계시간 위치 (좌우 & 상하 통합 조정) */
   .result-table tr.total-row td.col-mission {
-    /* translateX(좌우) translateY(상하) 지정 */
-    transform: translate(-10px, -5px); /* 왼쪽으로 -10px, 위로 -10px */
+    transform: translate(-10px, -5px);
   }
   .result-table tr.total-row td.col-score {
-    transform: translate(20px, -5px);  /* 오른쪽으로 20px, 위로 -10px */
+    transform: translate(20px, -5px);
   }
   
 </style>
@@ -180,7 +176,7 @@
 <div class="fixed-viewport">
   <!-- 상단 컨트롤 바 (팀 페이징 + 주요 페이지 5개 바로가기) -->
   <div class="page-control-bar">
-    <!-- 팀 전환 컨트롤 -->
+    <!-- 팀 전환 컨트롤 (버튼 비활성화 없음) -->
     <button id="prevBtn" class="page-btn" onclick="changeTeam(-1)">이전팀</button>
     <span id="pageIndicator" class="page-indicator">팀 1 / 1</span>
     <button id="nextBtn" class="page-btn" onclick="changeTeam(1)">다음팀</button>
@@ -188,9 +184,9 @@
     <!-- 구분선 -->
     <div class="nav-divider"></div>
 
-    <!-- 5개 주요 페이지 바로가기 버튼 -->
+    <!-- 5개 주요 페이지 바로가기 버튼 (1차 주행내용에 active 지정) -->
     <a href="/teams.html" class="nav-btn">주행 순서</a>
-    <a href="/team-result1.html" class="nav-btn">1차 주행내용</a>
+    <a href="/team-result1.html" class="nav-btn active">1차 주행내용</a>
     <a href="/team-result2.html" class="nav-btn">2차 주행내용</a>
     <a href="/leaderboard-round1.html" class="nav-btn">1차 순위표</a>
     <a href="/leaderboard-round2.html" class="nav-btn">2차 순위표</a>
@@ -224,10 +220,6 @@
           <td id="m5" class="col-score">-</td>
         </tr>
         <tr>
-          <td class="col-mission">좌회전 인식</td>
-          <td id="m6" class="col-score">-</td>
-        </tr>
-        <tr>
           <td class="col-mission">주행 시간</td>
           <td id="mTime" class="col-score">-</td>
         </tr>
@@ -247,63 +239,67 @@
   let raceResults = {};
   let currentRoundTitle = "1차";
 
-  // 백엔드 미션 키 매핑
   const MISSION_KEYS = [
-    "lblMIssionScore1", // 1. 신호등 인식 출발
-    "lblMIssionScore2", // 2. 라바콘 주행
-    "lblMIssionScore3", // 3. 고정 장애물 회피
-    "lblMIssionScore4", // 4. 방해 차량 추월
-    "lblMIssionScore5", // 5. 차선인식 주행
-    "lblMIssionScore6"  // 6. 좌회전 인식
+    "lblMIssionScore1",
+    "lblMIssionScore2",
+    "lblMIssionScore3",
+    "lblMIssionScore4",
+    "lblMIssionScore5"
   ];
+
+  function formatTimeValue(val) {
+    if (val === undefined || val === null) return "0.000";
+    const num = Number(val);
+    return isNaN(num) ? "0.000" : num.toFixed(3);
+  }
 
   function renderTeamResult() {
     const totalTeams = cachedTeams.length;
     if (totalTeams === 0) {
-      document.getElementById("headerTitle").textContent = `- - ${currentRoundTitle} 주행 결과`;
+      document.getElementById("headerTitle").textContent = `- - 1차 주행 결과`;
       document.getElementById("pageIndicator").innerText = "팀 0 / 0";
       return;
     }
 
-    if (currentTeamIndex < 0) currentTeamIndex = 0;
-    if (currentTeamIndex >= totalTeams) currentTeamIndex = totalTeams - 1;
+    // 순환 인덱스 계산 (양수/음수 범위 무한 순환)
+    currentTeamIndex = ((currentTeamIndex % totalTeams) + totalTeams) % totalTeams;
 
-    const currentTeam = cachedTeams[currentTeamIndex];
-    const teamId = currentTeam.id || currentTeam.team_id || currentTeam.number;
-    const teamName = currentTeam.team_name || currentTeam.name || currentTeam.team || "-";
+    const currentTeam = cachedTeams[currentTeamIndex] || {};
+    
+    // 팀 식별 ID 추출
+    const teamId = currentTeam.team_number || currentTeam.number || currentTeam.team_id || currentTeam.id;
+    
+    // 팀명 탐색
+    const teamName = currentTeam.team_name || 
+                     currentTeam.name || 
+                     currentTeam.team || 
+                     currentTeam.title || 
+                     (teamId ? `팀 ${teamId}` : "-");
 
-    // 상단 팀명 및 타이틀
-    document.getElementById("headerTitle").textContent = `${teamName} - ${currentRoundTitle} 주행 결과`;
+    // 상단 타이틀 표시
+    document.getElementById("headerTitle").textContent = `${teamName} - 1차 주행 결과`;
 
-    // 선택된 팀의 기록 데이터
-    const res = raceResults[teamId] || currentTeam.result || currentTeam;
+    // 1차 주행 결과 데이터 가져오기
+    const res = raceResults[teamId] || currentTeam.result || currentTeam || {};
     const scores = res.mission_scores || res.scores || {};
 
-    // 1~6번 미션 점수 매핑
+    // 1~5번 미션 점수 매핑
     MISSION_KEYS.forEach((key, idx) => {
       const el = document.getElementById(`m${idx + 1}`);
       if (el) {
         const val = scores[key] ?? res[key];
-        el.textContent = (val !== undefined && val !== null) ? formatSeconds(val, 3) : "0.000";
+        el.textContent = formatTimeValue(val);
       }
     });
 
-    // 7. 주행 시간
-    const driveTime = res.elapsed_time ?? res.drive_time;
-    document.getElementById("mTime").textContent = (driveTime !== undefined && driveTime !== null) 
-      ? formatSeconds(driveTime, 3) 
-      : "0.000";
+    // 주행 시간 및 최종 시간
+    document.getElementById("mTime").textContent = formatTimeValue(res.elapsed_time);
+    document.getElementById("mTotal").textContent = formatTimeValue(res.final_time);
 
-    // 8. 최종 합계 시간
-    const totalTime = res.final_time ?? res.official_elapsed_time;
-    document.getElementById("mTotal").textContent = (totalTime !== undefined && totalTime !== null) 
-      ? formatSeconds(totalTime, 3) 
-      : "0.000";
-
-    // 컨트롤 바 상태 업데이트
+    // 컨트롤 바 상태 업데이트 (버튼 비활성화 해제 유지)
     document.getElementById("pageIndicator").innerText = `팀 ${currentTeamIndex + 1} / ${totalTeams}`;
-    document.getElementById("prevBtn").disabled = (currentTeamIndex === 0);
-    document.getElementById("nextBtn").disabled = (currentTeamIndex === totalTeams - 1);
+    document.getElementById("prevBtn").disabled = false;
+    document.getElementById("nextBtn").disabled = false;
   }
 
   function changeTeam(direction) {
@@ -312,16 +308,48 @@
   }
 
   startBroadcastPolling((data) => {
-    currentRoundTitle = data.view_mode_title || "1차";
-    cachedTeams = data.teams || [];
+    currentRoundTitle = "1차";
+    raceResults = {};
+    cachedTeams = [];
 
-    // 결과 맵 처리
-    if (Array.isArray(data.race_results)) {
-      raceResults = {};
-      data.race_results.forEach(item => {
-        if (item && item.team_id) raceResults[item.team_id] = item;
+    if (Array.isArray(data)) {
+      // 1. data가 배열일 경우 (1차 데이터 필터링)
+      const r1Items = data.filter(item => item && Number(item.round_no) === 1);
+      
+      r1Items.forEach(item => {
+        const tNum = item.team_number || item.number || item.team_id || item.id;
+        if (tNum) {
+          raceResults[tNum] = item;
+          cachedTeams.push(item);
+        }
       });
+    } else if (data && typeof data === 'object') {
+      // 2. data가 객체일 경우 ({ teams: [...], race_results: [...] })
+      const rawTeams = data.teams || [];
+      const rawResults = data.race_results || [];
+
+      // 1차 주행 결과 매핑
+      rawResults.forEach(item => {
+        if (item && Number(item.round_no) === 1) {
+          const tNum = item.team_number || item.number || item.team_id || item.id;
+          if (tNum) raceResults[tNum] = item;
+        }
+      });
+
+      // 팀 정보 목록 설정
+      if (rawTeams.length > 0) {
+        cachedTeams = rawTeams;
+      } else if (Object.keys(raceResults).length > 0) {
+        cachedTeams = Object.values(raceResults);
+      }
     }
+
+    // 팀 번호 오름차순 정렬
+    cachedTeams.sort((a, b) => {
+      const numA = a.team_number || a.number || a.team_id || a.id || 0;
+      const numB = b.team_number || b.number || b.team_id || b.id || 0;
+      return numA - numB;
+    });
 
     renderTeamResult();
   });
