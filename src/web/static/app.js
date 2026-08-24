@@ -28,6 +28,16 @@ function setConnStatus(ok) {
 function startBroadcastPolling(onUpdate) {
   let stopped = false;
 
+  // 현재 URL 경로를 파악하여 보여줄 라운드 번호 결정
+  const pathname = window.location.pathname;
+  let forcedRound = null;
+
+  if (pathname.includes("round1") || pathname.includes("round-1")) {
+    forcedRound = 1;
+  } else if (pathname.includes("round2") || pathname.includes("round-2")) {
+    forcedRound = 2;
+  }
+
   async function poll() {
     if (stopped) return;
     try {
@@ -35,6 +45,21 @@ function startBroadcastPolling(onUpdate) {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setConnStatus(true);
+
+      // 페이지 파일명에 맞춰 리더보드 데이터 및 라운드 정보 강제 교체
+      if (forcedRound !== null && data) {
+        const roundKey = `ROUND${forcedRound}`;
+        
+        data.current_round = forcedRound;
+        data.view_mode = roundKey;
+        data.view_mode_title = `${forcedRound}차`;
+        
+        // 서버에서 전달된 leaderboards 객체에서 해당 라운드 데이터를 추출해 replacement
+        if (data.leaderboards && data.leaderboards[roundKey]) {
+          data.leaderboard = data.leaderboards[roundKey];
+        }
+      }
+
       onUpdate(data);
     } catch (error) {
       setConnStatus(false);

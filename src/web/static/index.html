@@ -3,49 +3,110 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Race Control - Master</title>
+<title>2026년 제9회 국민대학교 자율주행 경진대회</title>
 <link rel="stylesheet" href="/style.css" />
+<style>
+  /* 1. 브라우저 전체 스타일 강제 초기화 */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: auto !important;
+    background-color: #0d0f12 !important;
+    text-align: left !important;
+  }
+
+  /* 2. 최상단 컨테이너: 브라우저 좌측/상단에서 정확히 20px 위치에 absolute 고정 */
+  #custom-master-container {
+    position: absolute !important;
+    top: 20px !important;
+    left: 20px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 600px !important; /* 버튼 박스의 전체 가로 너비 */
+    box-sizing: border-box !important;
+    text-align: left !important;
+    z-index: 9999;
+  }
+
+  /* 3. 대형 타이틀 스타일 */
+  .custom-main-title {
+    font-size: 2.5rem !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    letter-spacing: -0.02em !important;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.3) !important;
+    margin: 0 0 20px 0 !important;
+    padding: 0 !important;
+    white-space: nowrap !important;
+    text-align: left !important;
+    line-height: 1.2 !important;
+  }
+
+  /* 4. 버튼들을 감싸는 영역 (표 형태 상자 레이아웃 제거 및 좌측 밀착) */
+  .custom-btn-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 5. 버튼 개별 스타일 (style.css 오버라이딩) */
+  .custom-btn-group a {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 16px 24px !important;
+    background: rgba(26, 29, 38, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 12px !important;
+    text-decoration: none !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    width: 100% !important;
+    float: none !important;
+  }
+
+  .custom-btn-group a:hover {
+    background: rgba(40, 45, 58, 0.95) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+  }
+
+  .custom-btn-group a strong {
+    color: #ff6b00 !important; /* 요청하신 주황색 폰트 유지 */
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+  }
+
+  .custom-btn-group a span {
+    color: #a0a5b1 !important;
+    font-size: 0.95rem !important;
+  }
+</style>
 </head>
-<body class="master-page">
-<nav class="topnav">
-  <a href="/index.html" class="active">마스터</a>
-  <a href="/schedule.html">본선 일정</a>
-  <a href="/live.html">실시간 경주</a>
-  <a href="/leaderboard.html">순위표</a>
-  <a href="/teams.html">참가팀</a>
-  <a href="/info.html">안내</a>
-  <span id="connStatus" class="conn-status">연결 확인 중...</span>
-</nav>
-<main class="master-main">
-  <section class="master-panel">
-    <div class="neon-line"></div>
-    <header class="broadcast-heading">
-      <span class="brand-mark">KMU <b>국민대학교</b></span>
-      <h1>RACE CONTROL</h1>
-      <span class="event-mark">◆ 자이트론</span>
-    </header>
-    <div class="master-links">
-      <a href="/schedule.html"><strong>본선 일정</strong><span>대회 일정</span></a>
-      <a href="/teams.html"><strong>주행 순서</strong><span>전체 참가팀</span></a>
-      <a href="/teams-2.html"><strong>주행 순서 2</strong><span>9번 - 16번 팀</span></a>
-      <a href="/teams-3.html"><strong>주행 순서 3</strong><span>17번 - 22번 팀</span></a>
-      <a href="/live.html"><strong>팀 주행 결과</strong><span>현재 팀 기록</span></a>
-      <a href="/leaderboard.html"><strong>경기 결과</strong><span>1차 · 2차 · 최종 순위</span></a>
-      <a href="/leaderboard-round1.html"><strong>1차 경기 결과</strong><span>1차 순위표</span></a>
-      <a href="/leaderboard-round1.html?page=2"><strong>1차 결과 2</strong><span>9위 - 16위</span></a>
-      <a href="/leaderboard-round1.html?page=3"><strong>1차 결과 3</strong><span>17위 - 22위</span></a>
-      <a href="/leaderboard-round2.html"><strong>2차 경기 결과</strong><span>2차 순위표</span></a>
-      <a href="/leaderboard-round2.html?page=2"><strong>2차 결과 2</strong><span>9위 - 16위</span></a>
-      <a href="/leaderboard-round2.html?page=3"><strong>2차 결과 3</strong><span>17위 - 22위</span></a>
-      <a href="/leaderboard-final.html"><strong>최종 순위</strong><span>최종 순위표</span></a>
-      <a href="/leaderboard-final.html?page=2"><strong>최종 순위 2</strong><span>9위 - 16위</span></a>
-      <a href="/leaderboard-final.html?page=3"><strong>최종 순위 3</strong><span>17위 - 22위</span></a>
-      <a href="/info.html"><strong>레이스 안내</strong><span>방송 화면 안내</span></a>
-          <a href="/replay.html"><strong>REPLAY</strong><span>재생 오버레이</span></a>
-          <a href="/timer.html"><strong>RACE TIMER</strong><span>타이머 오버레이</span></a>
-          <a href="/team-overlay.html"><strong>TEAM OVERLAY</strong><span>팀 소개 오버레이</span></a>
-    </div>
-  </section>
-</main>
+<body>
+
+<div id="custom-master-container">
+  <!-- 최상단 메인 타이틀 -->
+  <h1 class="custom-main-title">2026년 제9회 국민대학교 자율주행 경진대회</h1>
+
+  <!-- 5개 버튼 목록 -->
+  <div class="custom-btn-group">
+    <a href="/teams.html"><strong>주행 순서</strong><span>참가팀 주행 순서</span></a>
+    <a href="/team-result1.html"><strong>1차 주행 내용</strong><span>실시간 팀 주행 결과</span></a>
+    <a href="/team-result2.html"><strong>2차 주행 내용</strong><span>실시간 팀 주행 결과</span></a>
+    <a href="/leaderboard-round1.html"><strong>1차 경주 순위표</strong><span>1차 경기 결과</span></a>
+    <a href="/leaderboard-round2.html"><strong>2차 경주 순위표</strong><span>2차 경기 결과</span></a>
+    <a href="/leaderboard-final.html"><strong>최종 순위표</strong><span>최종 경기 결과</span></a>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+<script>
+  startBroadcastPolling(() => {});
+</script>
 </body>
 </html>

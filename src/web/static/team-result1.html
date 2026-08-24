@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>주행결과 - 레이스 방송 정보</title>
+<link rel="stylesheet" href="/style.css" />
+<style>
+  /* =========================================================
+     좌상단 앵커 고정 & 반응형 크기 변형 금지 (No-Scale Fixed Layout)
+     ========================================================= */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: auto !important;
+    background-color: #000000 !important;
+  }
+
+  /* 1920x1080 고정 컨테이너 (team-result.png 적용) */
+  .fixed-viewport {
+    position: absolute;
+    top: -50px;
+    left: -200px;
+    width: 1920px;
+    height: 1080px;
+    min-width: 1920px;
+    min-height: 1080px;
+    background-image: url('plates/team-result.png');
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    background-size: 1920px 1080px;
+  }
+
+  /* 상단 페이징 & 네비게이션 버튼 통합 컨트롤 바 */
+  .page-control-bar {
+    position: absolute;
+    top: 70px;
+    left: 210px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .page-btn, .nav-btn {
+    background: #3b82f6;
+    color: #ffffff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .nav-btn {
+    background: #10b981;
+  }
+
+  .nav-btn:hover {
+    background: #059669;
+  }
+
+  .nav-btn.active {
+    background: #f59e0b;
+  }
+
+  .page-btn:disabled {
+    background: #4b5563;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .page-indicator {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    margin-right: 10px;
+  }
+
+  .nav-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.3);
+    margin: 0 4px;
+  }
+
+  /* 주행결과 컨테이너 및 헤더 */
+  .result-display-container {
+    position: absolute;
+    top: 235px; /* <--- 230px에서 235px로 변경하여 전체 표를 5px 아래로 이동 */
+    left: 410px;
+    width: 1100px;
+  }
+
+  /* 상단 팀명 줄 */
+  .result-header-title {
+    text-align: center;
+    font-family: "Gmarket Sans", sans-serif;
+    font-weight: 700;
+    font-size: 44px;
+    color: #ffffff;
+    margin-bottom: 60px;
+
+    /* [상하 위치 조정] 음수(-) 값을 올리면 팀명만 위로 이동합니다 */
+    transform: translateY(-5px); /* 원하는 만큼 숫자를 변경하세요 (예: -10px, -20px) */
+  }
+
+  /* 주행결과 표 (구분선 제거) */
+  .result-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .result-table tr {
+    height: 69px; /* 배경 이미지 간격 위치 고정 */
+  }
+
+  /* 기본 셀 스타일 */
+  .result-table td {
+    font-family: "Pretendard", "Pretendard Local", sans-serif;
+    font-weight: 300;
+    font-size: 28px;
+    color: #ffffff;
+    border: none !important;
+    padding: 0;
+    vertical-align: middle;
+  }
+
+  /* =========================================================
+     [위치 조정 영역] transform: translateX() 속성으로 위치 조절
+     ========================================================= */
+  
+  /* 1. 미션 항목 열 위치 조정 */
+  .result-table td.col-mission {
+    width: 50%;
+    text-align: center;
+    transform: translateX(-10px);
+  }
+
+  /* 2. 벌초 점수 열 위치 조정 */
+  .result-table td.col-score {
+    width: 50%;
+    text-align: center;
+    transform: translateX(30px);
+  }
+
+  /* 맨 아래 최종합계시간 */
+  .result-table tr.total-row td {
+    font-family: "Pretendard", "Pretendard Local", sans-serif;
+    font-weight: 900;
+    font-size: 32px;
+    color: #ff9900;
+  
+    /* [상하 위치 조정] 음수(-) 값을 올리면 위로 이동합니다 */
+    transform: translateY(-10px); 
+  }
+
+  /* 3. 최종합계시간 위치 (좌우 & 상하 통합 조정) */
+  .result-table tr.total-row td.col-mission {
+    /* translateX(좌우) translateY(상하) 지정 */
+    transform: translate(-10px, -5px); /* 왼쪽으로 -10px, 위로 -10px */
+  }
+  .result-table tr.total-row td.col-score {
+    transform: translate(20px, -5px);  /* 오른쪽으로 20px, 위로 -10px */
+  }
+  
+</style>
+</head>
+<body class="broadcast-page">
+
+<div class="fixed-viewport">
+  <!-- 상단 컨트롤 바 (팀 페이징 + 주요 페이지 5개 바로가기) -->
+  <div class="page-control-bar">
+    <!-- 팀 전환 컨트롤 -->
+    <button id="prevBtn" class="page-btn" onclick="changeTeam(-1)">이전팀</button>
+    <span id="pageIndicator" class="page-indicator">팀 1 / 1</span>
+    <button id="nextBtn" class="page-btn" onclick="changeTeam(1)">다음팀</button>
+
+    <!-- 구분선 -->
+    <div class="nav-divider"></div>
+
+    <!-- 5개 주요 페이지 바로가기 버튼 -->
+    <a href="/teams.html" class="nav-btn">주행 순서</a>
+    <a href="/team-result1.html" class="nav-btn">1차 주행내용</a>
+    <a href="/team-result2.html" class="nav-btn">2차 주행내용</a>
+    <a href="/leaderboard-round1.html" class="nav-btn">1차 순위표</a>
+    <a href="/leaderboard-round2.html" class="nav-btn">2차 순위표</a>
+    <a href="/leaderboard-final.html" class="nav-btn">최종 순위표</a>
+  </div>
+
+  <!-- 이미지 위 팀 주행결과 표시 영역 -->
+  <div class="result-display-container">
+    <div id="headerTitle" class="result-header-title">- - 1차 주행 결과</div>
+
+    <table class="result-table">
+      <tbody>
+        <tr>
+          <td class="col-mission">신호등 인식 출발</td>
+          <td id="m1" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">라바콘 주행</td>
+          <td id="m2" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">고정 장애물 회피</td>
+          <td id="m3" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">방해 차량 추월</td>
+          <td id="m4" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">차선인식 주행</td>
+          <td id="m5" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">좌회전 인식</td>
+          <td id="m6" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">주행 시간</td>
+          <td id="mTime" class="col-score">-</td>
+        </tr>
+        <tr class="total-row">
+          <td class="col-mission">최종 합계 시간</td>
+          <td id="mTotal" class="col-score">-</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+<script>
+  let currentTeamIndex = 0;
+  let cachedTeams = [];
+  let raceResults = {};
+  let currentRoundTitle = "1차";
+
+  // 백엔드 미션 키 매핑
+  const MISSION_KEYS = [
+    "lblMIssionScore1", // 1. 신호등 인식 출발
+    "lblMIssionScore2", // 2. 라바콘 주행
+    "lblMIssionScore3", // 3. 고정 장애물 회피
+    "lblMIssionScore4", // 4. 방해 차량 추월
+    "lblMIssionScore5", // 5. 차선인식 주행
+    "lblMIssionScore6"  // 6. 좌회전 인식
+  ];
+
+  function renderTeamResult() {
+    const totalTeams = cachedTeams.length;
+    if (totalTeams === 0) {
+      document.getElementById("headerTitle").textContent = `- - ${currentRoundTitle} 주행 결과`;
+      document.getElementById("pageIndicator").innerText = "팀 0 / 0";
+      return;
+    }
+
+    if (currentTeamIndex < 0) currentTeamIndex = 0;
+    if (currentTeamIndex >= totalTeams) currentTeamIndex = totalTeams - 1;
+
+    const currentTeam = cachedTeams[currentTeamIndex];
+    const teamId = currentTeam.id || currentTeam.team_id || currentTeam.number;
+    const teamName = currentTeam.team_name || currentTeam.name || currentTeam.team || "-";
+
+    // 상단 팀명 및 타이틀
+    document.getElementById("headerTitle").textContent = `${teamName} - ${currentRoundTitle} 주행 결과`;
+
+    // 선택된 팀의 기록 데이터
+    const res = raceResults[teamId] || currentTeam.result || currentTeam;
+    const scores = res.mission_scores || res.scores || {};
+
+    // 1~6번 미션 점수 매핑
+    MISSION_KEYS.forEach((key, idx) => {
+      const el = document.getElementById(`m${idx + 1}`);
+      if (el) {
+        const val = scores[key] ?? res[key];
+        el.textContent = (val !== undefined && val !== null) ? formatSeconds(val, 3) : "0.000";
+      }
+    });
+
+    // 7. 주행 시간
+    const driveTime = res.elapsed_time ?? res.drive_time;
+    document.getElementById("mTime").textContent = (driveTime !== undefined && driveTime !== null) 
+      ? formatSeconds(driveTime, 3) 
+      : "0.000";
+
+    // 8. 최종 합계 시간
+    const totalTime = res.final_time ?? res.official_elapsed_time;
+    document.getElementById("mTotal").textContent = (totalTime !== undefined && totalTime !== null) 
+      ? formatSeconds(totalTime, 3) 
+      : "0.000";
+
+    // 컨트롤 바 상태 업데이트
+    document.getElementById("pageIndicator").innerText = `팀 ${currentTeamIndex + 1} / ${totalTeams}`;
+    document.getElementById("prevBtn").disabled = (currentTeamIndex === 0);
+    document.getElementById("nextBtn").disabled = (currentTeamIndex === totalTeams - 1);
+  }
+
+  function changeTeam(direction) {
+    currentTeamIndex += direction;
+    renderTeamResult();
+  }
+
+  startBroadcastPolling((data) => {
+    currentRoundTitle = data.view_mode_title || "1차";
+    cachedTeams = data.teams || [];
+
+    // 결과 맵 처리
+    if (Array.isArray(data.race_results)) {
+      raceResults = {};
+      data.race_results.forEach(item => {
+        if (item && item.team_id) raceResults[item.team_id] = item;
+      });
+    }
+
+    renderTeamResult();
+  });
+</script>
+</body>
+</html>

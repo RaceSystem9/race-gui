@@ -2,40 +2,240 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>실시간 경주 - 레이스 방송 정보</title>
 <link rel="stylesheet" href="/style.css" />
+<style>
+  /* =========================================================
+     좌상단 앵커 고정 & 반응형 크기 변형 금지 (No-Scale Fixed Layout)
+     ========================================================= */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: auto !important;
+    background-color: #000000 !important;
+  }
+
+  /* 1920x1080 고정 컨테이너 (live.png / team-result.png 적용) */
+  .fixed-viewport {
+    position: absolute;
+    top: -50px;
+    left: -200px;
+    width: 1920px;
+    height: 1080px;
+    min-width: 1920px;
+    min-height: 1080px;
+    background-image: url('plates/team-result.png'); /* 필요시 사용 중인 배경 이미지 파일명으로 수정하세요 */
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    background-size: 1920px 1080px;
+  }
+
+  /* 상단 페이징 & 네비게이션 버튼 통합 컨트롤 바 */
+  .page-control-bar {
+    position: absolute;
+    top: 70px;
+    left: 210px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .nav-btn {
+    background: #10b981;
+    color: #ffffff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .nav-btn:hover {
+    background: #059669;
+  }
+
+  .nav-btn.active {
+    background: #f59e0b; /* 현재 페이지 강조 (주황색) */
+  }
+
+  .conn-indicator {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    margin-left: 10px;
+  }
+
+  /* 실시간 주행 정보 오버레이 및 배치 스타일 */
+  .live-display-container {
+    position: absolute;
+    top: 280px;
+    left: 410px;
+    width: 1100px;
+    color: #00ffff;
+    font-family: "Pretendard Local", "Gmarket Sans", sans-serif;
+  }
+
+  .live-header-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+  }
+
+  .live-title {
+    font-size: 36px;
+    font-weight: 800;
+    color: #ff007f;
+  }
+
+  .team-info-box {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    margin-bottom: 25px;
+  }
+
+  .overlay-team {
+    font-size: 42px;
+    font-weight: 800;
+    color: #ff007f;
+    margin-bottom: 8px;
+  }
+
+  .overlay-sub {
+    font-size: 24px;
+    font-weight: 600;
+    color: #00ffff;
+  }
+
+  .timer-box {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 25px;
+    border-radius: 12px;
+    border: 2px solid #00ffff;
+    margin-bottom: 25px;
+  }
+
+  .overlay-time {
+    font-size: 72px;
+    font-weight: 900;
+    color: #00ffff;
+    letter-spacing: 2px;
+  }
+
+  .overlay-time.countdown {
+    color: #ff007f;
+  }
+
+  /* 미션 스코어 영역 */
+  .mission-container {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+  }
+
+  .mission-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+  }
+
+  .mission-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .mission-label {
+    font-size: 18px;
+    color: #ffffff;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .mission-score {
+    font-size: 26px;
+    font-weight: 800;
+    color: #00ffff;
+  }
+
+  .mission-total-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding-top: 15px;
+    font-size: 28px;
+    font-weight: 800;
+  }
+
+  .mission-total-box strong {
+    font-size: 36px;
+    color: #ff007f;
+  }
+</style>
 </head>
-<body class="broadcast-page plate-page plate-team-result">
-<nav class="topnav">
-  <a href="/index.html">홈</a>
-  <a href="/live.html" class="active">실시간 경주</a>
-  <a href="/leaderboard.html">순위표</a>
-  <a href="/teams.html">참가팀</a>
-  <a href="/teams-2.html">주행 순서 2</a>
-  <a href="/teams-3.html">주행 순서 3</a>
-  <a href="/info.html">안내</a>
-  <span id="connStatus" class="conn-status">연결 확인 중...</span>
-</nav>
-<main class="broadcast-main">
-  <section class="broadcast-panel">
-    <div class="neon-line"></div>
-    <header class="broadcast-heading">
-      <span class="brand-mark">KMU <b>국민대학교</b></span>
-      <h1 id="roundTitle">1차 주행 결과</h1>
-      <span class="event-mark">◆ 자이트론</span>
-    </header>
-    <div class="mission-title"><span>미션 항목</span><span>벌초</span></div>
-    <div id="missionRows"></div>
-    <div class="mission-total"><span>최종 합계 시간</span><strong id="finalTime">-</strong></div>
-    <div class="neon-line"></div>
-  </section>
-  <section class="broadcast-overlay">
-    <div id="timer" class="overlay-time">-</div>
-    <div id="teamTitle" class="overlay-team">-</div>
-    <div id="teamSub" hidden></div>
-  </section>
-</main>
+<body class="broadcast-page">
+
+<div class="fixed-viewport">
+  <!-- 상단 컨트롤 바 (주요 페이지 바로가기) -->
+  <div class="page-control-bar">
+    <a href="/teams.html" class="nav-btn">주행 순서</a>
+    <a href="/live.html" class="nav-btn active">주행결과</a>
+    <a href="/leaderboard-round1.html" class="nav-btn">1차 순위표</a>
+    <a href="/leaderboard-round2.html" class="nav-btn">2차 순위표</a>
+    <a href="/leaderboard-final.html" class="nav-btn">최종 순위표</a>
+    <span id="connStatus" class="conn-indicator">연결 확인 중...</span>
+  </div>
+
+  <!-- 실시간 경주 정보 영역 -->
+  <div class="live-display-container">
+    <div class="live-header-box">
+      <div id="roundTitle" class="live-title">1차 주행 결과</div>
+    </div>
+
+    <!-- 현재 주행 팀 정보 -->
+    <div class="team-info-box">
+      <div id="teamTitle" class="overlay-team">-</div>
+      <div id="teamSub" class="overlay-sub">- · 상태 -</div>
+    </div>
+
+    <!-- 타이머 Display -->
+    <div class="timer-box">
+      <div id="timer" class="overlay-time">-</div>
+    </div>
+
+    <!-- 미션 점수 및 최종 시간 -->
+    <div class="mission-container">
+      <div style="font-size: 22px; font-weight: 700; color: #ffffff;">미션 항목 점수</div>
+      <div id="missionRows" class="mission-grid"></div>
+      
+      <div class="mission-total-box">
+        <span>최종 합계 시간</span>
+        <strong id="finalTime">-</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="/app.js"></script>
 <script>
   const MISSION_LABELS = {
@@ -47,12 +247,15 @@
   };
 
   startBroadcastPolling((data) => {
+    // 1. 차수 타이틀
     document.getElementById("roundTitle").textContent = `${data.view_mode_title || "1차"} 주행 결과`;
 
+    // 2. 팀 정보
     const team = data.team || {};
-    document.getElementById("teamTitle").textContent = team.name ?? "-";
-    document.getElementById("teamSub").textContent = `${team.school ?? "-"} · 상태 ${data.status ?? "-"}`;
+    document.getElementById("teamTitle").textContent = team.name ?? team.team_name ?? "-";
+    document.getElementById("teamSub").textContent = `${team.school ?? team.dept ?? "-"} · 상태 ${data.status ?? "-"}`;
 
+    // 3. 타이머
     const timerEl = document.getElementById("timer");
     if (data.status === "COUNTDOWN") {
       timerEl.textContent = `- ${Math.max(0, Number(data.countdown ?? 0))}`;
@@ -63,12 +266,19 @@
       timerEl.classList.remove("countdown");
     }
 
+    // 4. 미션 점수
     const scores = data.mission_scores || {};
     const scoreHtml = Object.entries(MISSION_LABELS)
-      .map(([key, label]) => `<div class="mission-row"><span>${label}</span><strong>${escapeHtml(scores[key] ?? 0)}</strong></div>`)
+      .map(([key, label]) => `
+        <div class="mission-card">
+          <span class="mission-label">${label}</span>
+          <span class="mission-score">${escapeHtml(scores[key] ?? 0)}</span>
+        </div>
+      `)
       .join("");
     document.getElementById("missionRows").innerHTML = scoreHtml;
 
+    // 5. 최종 시간
     document.getElementById("finalTime").textContent = formatSeconds(data.final_time);
   });
 </script>

@@ -2,31 +2,265 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>1차 경기결과 - 레이스 방송 정보</title>
+<title>1차 경기 결과 - 레이스 방송 정보</title>
 <link rel="stylesheet" href="/style.css" />
+<style>
+  /* =========================================================
+     좌상단 앵커 고정 & 반응형 크기 변형 금지 (No-Scale Fixed Layout)
+     ========================================================= */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: auto !important;
+    background-color: #000000 !important;
+  }
+
+  /* 1920x1080 고정 컨테이너 (round1.png 적용) */
+  .fixed-viewport {
+    position: absolute;
+    top: -50px;
+    left: -200px;
+    width: 1920px;
+    height: 1080px;
+    min-width: 1920px;
+    min-height: 1080px;
+    background-image: url('plates/round1.png');
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    background-size: 1920px 1080px;
+  }
+
+  /* 상단 페이징 & 네비게이션 버튼 통합 컨트롤 바 */
+  .page-control-bar {
+    position: absolute;
+    top: 70px;
+    left: 210px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .page-btn, .nav-btn {
+    background: #3b82f6;
+    color: #ffffff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .nav-btn {
+    background: #10b981; /* 네비게이션 버튼 색상 구분 (녹색) */
+  }
+
+  .nav-btn:hover {
+    background: #059669;
+  }
+
+  .nav-btn.active {
+    background: #f59e0b; /* 현재 페이지 강조 (주황색) */
+  }
+
+  .page-btn:disabled {
+    background: #4b5563;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .page-indicator {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    margin-right: 10px;
+  }
+
+  .nav-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.3);
+    margin: 0 4px;
+  }
+
+  /* round1.png 플레이트 내 테이블 위치 고정 */
+  .plate-order-table {
+    position: absolute;
+    top: 337px;
+    left: 410px;
+    width: 1100px;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .plate-order-table tr {
+    height: 68.5px;
+  }
+
+.plate-order-table td {
+    font-family: "Pretendard Local", "Gmarket Sans", sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  } 
+  
+  /* 컬럼별 너비 및 좌우 미세 위치 이동 */
+  .plate-order-table td.col-rank { 
+    width: 160px; 
+    text-align: center;
+    transform: translateX(15px); /* 음수(-): 왼쪽으로 이동 / 양수(+): 오른쪽으로 이동 */
+  }
+
+  .plate-order-table td.col-dept { 
+    width: 340px; 
+    text-align: center;
+    transform: translateX(-10px);  /* 오른쪽으로 15px 이동 */
+  }
+
+  .plate-order-table td.col-team { 
+    width: 340px; 
+    text-align: center;
+    transform: translateX(-50px);  /* 오른쪽으로 20px 이동 */
+  }
+  
+  .plate-order-table td.col-time { 
+    width: 260px; 
+    text-align: center;
+    transform: translateX(-60px);  /* 오른쪽으로 20px 이동 */
+  }
+  
+</style>
 </head>
-<body class="broadcast-page plate-page plate-round1">
-<main class="broadcast-main">
-  <section class="broadcast-panel ranking-panel">
-    <div class="neon-line"></div>
-    <header class="broadcast-heading"><span class="brand-mark">KMU <b>국민대학교</b></span><h1>1차 경기 결과</h1><span class="event-mark">◆ 자이트론</span></header>
-    <table class="leaderboard broadcast-table"><thead><tr><th class="rank">순위</th><th>소속</th><th>팀명</th><th class="time">총 주행 시간</th></tr></thead><tbody id="rows"></tbody></table>
-  </section>
-</main>
+<body class="broadcast-page">
+
+<div class="fixed-viewport">
+  <!-- 상단 컨트롤 바 (페이징 + 주요 페이지 5개 바로가기) -->
+  <div class="page-control-bar">
+    <!-- 페이징 컨트롤 -->
+    <button id="prevBtn" class="page-btn" onclick="changePage(-1)">이전 페이지</button>
+    <span id="pageIndicator" class="page-indicator">1 / 3 페이지</span>
+    <button id="nextBtn" class="page-btn" onclick="changePage(1)">다음 페이지</button>
+
+    <!-- 구분선 -->
+    <div class="nav-divider"></div>
+
+    <!-- 5개 주요 페이지 바로가기 버튼 -->
+    <a href="/teams.html" class="nav-btn">주행 순서</a>
+    <a href="/team-result1.html" class="nav-btn">1차 주행내용</a>
+    <a href="/team-result2.html" class="nav-btn">2차 주행내용</a>
+    <a href="/leaderboard-round1.html" class="nav-btn active">1차 순위표</a>
+    <a href="/leaderboard-round2.html" class="nav-btn">2차 순위표</a>
+    <a href="/leaderboard-final.html" class="nav-btn">최종 순위표</a>
+  </div>
+
+  <!-- 이미지 위 정밀 배치 테이블 -->
+  <table class="plate-order-table">
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
 <script src="/app.js"></script>
 <script>
-  const pageNumber = Math.max(1, Math.min(3, Number(new URLSearchParams(location.search).get("page") || 1)));
-  const pageStart = (pageNumber - 1) * 8;
+  let currentPage = 1;
+  const pageSize = 8;
+  let cachedLeaderboard = [];
+
+  function renderPage() {
+    const tbody = document.getElementById("rows");
+    
+    // 실제 데이터 개수 (데이터가 없으면 0)
+    const totalItems = cachedLeaderboard.length;
+    // 데이터 개수 기준 총 페이지 수 계산
+    const totalPages = Math.ceil(Math.max(totalItems, 1) / pageSize) || 1;
+    
+    if (currentPage < 1) currentPage = 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIdx = (currentPage - 1) * pageSize;
+    const pageItems = cachedLeaderboard.slice(startIdx, startIdx + pageSize);
+
+    let html = "";
+    for (let i = 0; i < pageSize; i++) {
+      const item = pageItems[i];
+      const currentRank = startIdx + i + 1; // 1페이지: 1~8 / 2페이지: 9~16 / 3페이지: 17~24
+
+      // 전체 순위 기준 1~3위만 ff007f, 4위 이상은 00ffff 적용
+      const rankColor = currentRank <= 3 ? "#ff007f" : "#00ffff";
+
+      // 참가팀 총 수인 20개를 초과하는 순위 칸은 '-'로 표시
+      if (item && currentRank <= totalItems) {
+        const school = item.school || item.dept || "-";
+        const teamName = item.team_name || item.team || "-";
+        
+        let totalTime = "-";
+        if (item.disqualified) {
+          totalTime = "-";
+        } else if (item.final_time !== null && item.final_time !== undefined) {
+          totalTime = formatSeconds(item.final_time, 2);
+        } else if (item.round1_time) {
+          totalTime = item.round1_time;
+        }
+
+        html += `<tr style="color: ${rankColor};">
+          <td class="col-rank">${currentRank}</td>
+          <td class="col-dept">${escapeHtml(school)}</td>
+          <td class="col-team">${escapeHtml(teamName)}</td>
+          <td class="col-time">${escapeHtml(totalTime)}</td>
+        </tr>`;
+      } else {
+        // 데이터가 없거나 20위 초과 시 빈 줄 처리
+        html += `<tr style="color: ${rankColor};">
+          <td class="col-rank">-</td>
+          <td class="col-dept">-</td>
+          <td class="col-team">-</td>
+          <td class="col-time">-</td>
+        </tr>`;
+      }
+    }
+    tbody.innerHTML = html;
+
+    document.getElementById("pageIndicator").innerText = `${currentPage} / ${totalPages} 페이지`;
+    document.getElementById("prevBtn").disabled = (currentPage === 1);
+    document.getElementById("nextBtn").disabled = (currentPage === totalPages);
+  }
+  
+  function changePage(direction) {
+    currentPage += direction;
+    renderPage();
+  }
+
   startBroadcastPolling((data) => {
-    const rows = ((data.leaderboards && data.leaderboards.ROUND1) || []).slice(pageStart, pageStart + 8);
-    document.getElementById("rows").innerHTML = rows.map((row, index) => {
-      if (!row || row.team_name === "-") return "";
-      const rank = pageStart + index + 1;
-      const invalid = row.giveup || row.disqualified || row.final_time === null || row.final_time === undefined;
-      const time = row.giveup ? "포기" : invalid ? "실격" : formatSeconds(row.final_time);
-      return `<tr class="${rank <= 3 ? "top-rank" : "regular-rank"}"><td class="rank">${rank}</td><td>${escapeHtml(row.school)}</td><td>${escapeHtml(row.team_name)}</td><td class="time">${time}</td></tr>`;
-    }).join("");
+    // 1. JSON 응답 배열 추출
+    let list = Array.isArray(data) 
+      ? data 
+      : (data.race_results || data.round1_leaderboard || data.leaderboard || []);
+
+    // 2. 1차 경기(round_no가 1 또는 "1") 항목만 정확히 필터링
+    list = list.filter(item => item && String(item.round_no) === "1");
+
+    // 3. 기록 순 정렬 (완주팀 기록 오름차순 -> 실격팀 하단 배치)
+    list.sort((a, b) => {
+      if (a.disqualified && !b.disqualified) return 1;
+      if (!a.disqualified && b.disqualified) return -1;
+      if (a.disqualified && b.disqualified) return 0;
+      return (a.final_time ?? 9999) - (b.final_time ?? 9999);
+    });
+
+    cachedLeaderboard = list;
+    renderPage();
   });
 </script>
 </body>

@@ -985,3 +985,28 @@ body.broadcast-page {
   height: 5.6vh !important;       /* tr과 똑같은 숫자로 맞춰주세요 */
   line-height: 5.6vh !important;  /* 글자가 칸의 정중앙에 오도록 똑같이 맞춰주세요 */
 }
+
+/* =========================================================
+   순위별 색상 강제 적용 (1~3위: #ff007f / 4위 이하: #00ffff)
+   ========================================================= */
+
+/* 1, 2, 3위 마젠타 Pink (#ff007f) */
+table.broadcast-table tbody tr:nth-child(1) td,
+table.broadcast-table tbody tr:nth-child(2) td,
+table.broadcast-table tbody tr:nth-child(3) td,
+table.broadcast-table tr.top-rank td,
+table.broadcast-table tr.regular-rank:nth-child(-n+3) td,
+.plate-round1 .broadcast-table tbody tr:nth-child(-n+3) td,
+.plate-round2 .broadcast-table tbody tr:nth-child(-n+3) td,
+.plate-final .broadcast-table tbody tr:nth-child(-n+3) td {
+  color: #ff007f !important;
+}
+
+/* 4위 이하 시안 Cyan (#00ffff) */
+table.broadcast-table tbody tr:nth-child(n+4) td,
+table.broadcast-table tr.regular-rank:nth-child(n+4) td,
+.plate-round1 .broadcast-table tbody tr:nth-child(n+4) td,
+.plate-round2 .broadcast-table tbody tr:nth-child(n+4) td,
+.plate-final .broadcast-table tbody tr:nth-child(n+4) td {
+  color: #00ffff !important;
+}
