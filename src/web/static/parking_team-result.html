@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>주행결과 - 레이스 방송 정보</title>
+<title>개별 결과 - 주차경기 (번외)</title>
 <link rel="stylesheet" href="/style.css" />
 <style>
   /* =========================================================
@@ -17,7 +17,7 @@
     background-color: #00FF00 !important;
   }
 
-  /* 1920x1080 고정 컨테이너 (team-result.png 적용) */
+  /* 1920x1080 고정 컨테이너 (parking_team-result.png 적용) */
   .fixed-viewport {
     position: absolute;
     top: -50px;
@@ -26,7 +26,7 @@
     height: 1080px;
     min-width: 1920px;
     min-height: 1080px;
-    background-image: url('plates/team-result.png');
+    background-image: url('plates/parking_team-result.png');
     background-repeat: no-repeat;
     background-position: 0 0;
     background-size: 1920px 1080px;
@@ -120,7 +120,7 @@
   }
 
   .result-table tr {
-    height: 69px;
+    height: 61px;
   }
 
   /* 기본 셀 스타일 */
@@ -189,136 +189,100 @@
     <!-- 구분선 -->
     <div class="nav-divider"></div>
 
-    <!-- 5개 주요 페이지 바로가기 버튼 (1차 주행내용에 active 지정) -->
-    <a href="/teams.html" class="nav-btn">주행 순서</a>
-    <a href="/team-result1.html" class="nav-btn active">1차 주행내용</a>
-    <a href="/team-result2.html" class="nav-btn">2차 주행내용</a>
-    <a href="/leaderboard-round1.html" class="nav-btn">1차 순위표</a>
-    <a href="/leaderboard-round2.html" class="nav-btn">2차 순위표</a>
-    <a href="/leaderboard-final.html" class="nav-btn">최종 순위표</a>
+    <!-- 번외 주차경기 페이지 바로가기 버튼 -->
+    <a href="/parking_teams.html" class="nav-btn">참가팀</a>
+    <a href="/parking_admin.html" class="nav-btn">채점 입력</a>
+    <a href="/parking_team-result.html" class="nav-btn active">개별 결과</a>
+    <a href="/parking_leaderboard.html" class="nav-btn">순위표</a>
   </div>
 
-  <!-- 이미지 위 팀 주행결과 표시 영역 -->
+  <!-- 이미지 위 팀 채점결과 표시 영역 -->
   <div class="result-display-container">
-    <div id="headerTitle" class="result-header-title">- - 1차 주행 결과</div>
+    <div id="headerTitle" class="result-header-title">- - 주차경기 채점 결과</div>
 
     <table class="result-table">
       <tbody>
         <tr>
-          <td class="col-mission">신호등 인식 출발</td>
-          <td id="m1" class="col-score">-</td>
+          <td class="col-mission">라바콘 살짝 접촉</td>
+          <td id="p1" class="col-score">-</td>
         </tr>
         <tr>
-          <td class="col-mission">라바콘 주행</td>
-          <td id="m2" class="col-score">-</td>
+          <td class="col-mission">라바콘 전복/이동</td>
+          <td id="p2" class="col-score">-</td>
         </tr>
         <tr>
-          <td class="col-mission">차선 인식 주행</td>
-          <td id="m3" class="col-score">-</td>
+          <td class="col-mission">칸막이 접촉</td>
+          <td id="p3" class="col-score">-</td>
         </tr>
         <tr>
-          <td class="col-mission">고정 장애물 회피</td>
-          <td id="m4" class="col-score">-</td>
+          <td class="col-mission">칸막이 이동</td>
+          <td id="p4" class="col-score">-</td>
         </tr>
         <tr>
-          <td class="col-mission">방해 차량 추월</td>
-          <td id="m5" class="col-score">-</td>
+          <td class="col-mission">주차 사각형 돌출</td>
+          <td id="p5" class="col-score">-</td>
         </tr>
         <tr>
-          <td class="col-mission">미션 합산 벌초</td>
-          <td id="mSum" class="col-score">-</td>
+          <td class="col-mission">주차 실패</td>
+          <td id="p6" class="col-score">-</td>
         </tr>
         <tr>
-          <td class="col-mission">주행 시간</td>
-          <td id="mTime" class="col-score">-</td>
+          <td class="col-mission">처음 위치 정차 실패</td>
+          <td id="p7" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">제한시간 초과</td>
+          <td id="p8" class="col-score">-</td>
         </tr>
         <tr class="total-row">
-          <td class="col-mission">최종 합계 시간</td>
-          <td id="mTotal" class="col-score">-</td>
+          <td class="col-mission">최종 점수 (500점 - 감점)</td>
+          <td id="pFinal" class="col-score">-</td>
         </tr>
       </tbody>
     </table>
   </div>
 </div>
 
-<script src="/app.js"></script>
+<script src="/parking.js"></script>
 <script>
   let currentTeamIndex = 0;
   let cachedTeams = [];
-  let raceResults = {};
-  let currentRoundTitle = "1차";
-
-  const MISSION_KEYS = [
-    "lblMIssionScore1",
-    "lblMIssionScore2",
-    "lblMIssionScore3",
-    "lblMIssionScore4",
-    "lblMIssionScore5"
-  ];
-  const MISSION_PENALTY_SECONDS = [10, 3, 5, 10, 10];
-
-  function formatMissionScore(val, penaltySeconds) {
-    const num = Number(val);
-    const score = Number.isFinite(num) ? Math.trunc(num) : 0;
-    return `${score}&nbsp;&nbsp;&nbsp;<span class="mission-penalty-label">x ${penaltySeconds}초</span>`;
-  }
-
-  function formatTimeValue(val) {
-    if (val === undefined || val === null) return "0.00";
-    const num = Number(val);
-    return Number.isFinite(num) ? num.toFixed(2) : "0.00";
-  }
 
   function renderTeamResult() {
     const totalTeams = cachedTeams.length;
     if (totalTeams === 0) {
-      document.getElementById("headerTitle").textContent = `- - 1차 주행 결과`;
+      document.getElementById("headerTitle").textContent = "- - 주차경기 채점 결과";
       document.getElementById("pageIndicator").innerText = "팀 0 / 0";
+      for (let index = 1; index <= 8; index++) {
+        document.getElementById(`p${index}`).textContent = "-";
+      }
+      document.getElementById("pFinal").textContent = "-";
       return;
     }
 
-    // 순환 인덱스 계산 (양수/음수 범위 무한 순환)
     currentTeamIndex = ((currentTeamIndex % totalTeams) + totalTeams) % totalTeams;
-
-    const currentTeam = cachedTeams[currentTeamIndex] || {};
-    
-    // 팀 식별 ID 추출
-    const teamId = currentTeam.team_number || currentTeam.number || currentTeam.team_id || currentTeam.id;
-    
-    // 팀명 탐색
-    const teamName = currentTeam.team_name || 
-                     currentTeam.name || 
-                     currentTeam.team || 
-                     currentTeam.title || 
-                     (teamId ? `팀 ${teamId}` : "-");
-
-    // 상단 타이틀 표시
-    document.getElementById("headerTitle").textContent = `${teamName} - 1차 주행 결과`;
-
-    // 1차 주행 결과 데이터 가져오기
-    const res = raceResults[teamId] || currentTeam.result || currentTeam || {};
-    const scores = res.mission_scores || res.scores || {};
-
-    let missionPenaltySeconds = 0;
-
-    // 1~5번 미션 점수 매핑
-    MISSION_KEYS.forEach((key, idx) => {
-      const el = document.getElementById(`m${idx + 1}`);
-      const score = Number(scores[key] ?? res[key]);
-      const missionScore = Number.isFinite(score) ? Math.trunc(score) : 0;
-      missionPenaltySeconds += missionScore * MISSION_PENALTY_SECONDS[idx];
-      if (el) {
-        el.innerHTML = formatMissionScore(missionScore, MISSION_PENALTY_SECONDS[idx]);
-      }
+    const currentTeam = cachedTeams[currentTeamIndex];
+    const score = parkingLoadData().scores[currentTeam.id] || {};
+    const protrudeChoice = PARKING_ITEMS[4].choices.find(
+      (choice) => choice.value === Number(score.protrude || 0)
+    );
+    const values = [
+      `${Number(score.cone_touch) || 0}회`,
+      `${Number(score.cone_move) || 0}회`,
+      `${Number(score.wall_touch) || 0}회`,
+      `${Number(score.wall_move) || 0}회`,
+      protrudeChoice ? protrudeChoice.label : "없음",
+      PARKING_ITEMS[5].choices.find(
+        (choice) => choice.value === Number(score.park_fail || 0)
+      )?.label || "없음",
+      score.start_fail ? "해당" : "해당없음",
+      score.time_over ? "해당" : "해당없음",
+    ];
+    document.getElementById("headerTitle").textContent = `${currentTeam.school || "-"} / ${currentTeam.team_name || "-"} - 주차경기 채점 결과`;
+    values.forEach((value, index) => {
+      document.getElementById(`p${index + 1}`).textContent = value;
     });
-
-    document.getElementById("mSum").textContent = formatTimeValue(missionPenaltySeconds);
-
-    // 주행 시간 및 최종 시간
-    document.getElementById("mTime").textContent = formatTimeValue(res.elapsed_time);
-    document.getElementById("mTotal").textContent = res.disqualified ? "실격" : formatTimeValue(res.final_time);
-
-    // 컨트롤 바 상태 업데이트 (버튼 비활성화 해제 유지)
+    document.getElementById("pFinal").textContent = `${parkingFinalScore(score)}점`;
     document.getElementById("pageIndicator").innerText = `팀 ${currentTeamIndex + 1} / ${totalTeams}`;
     document.getElementById("prevBtn").disabled = false;
     document.getElementById("nextBtn").disabled = false;
@@ -329,50 +293,8 @@
     renderTeamResult();
   }
 
-  startBroadcastPolling((data) => {
-    currentRoundTitle = "1차";
-    raceResults = {};
-    cachedTeams = [];
-
-    if (Array.isArray(data)) {
-      // 1. data가 배열일 경우 (1차 데이터 필터링)
-      const r1Items = data.filter(item => item && Number(item.round_no) === 1);
-      
-      r1Items.forEach(item => {
-        const tNum = item.team_number || item.number || item.team_id || item.id;
-        if (tNum) {
-          raceResults[tNum] = item;
-          cachedTeams.push(item);
-        }
-      });
-    } else if (data && typeof data === 'object') {
-      // 2. data가 객체일 경우 ({ teams: [...], race_results: [...] })
-      const rawTeams = data.teams || [];
-      const rawResults = data.race_results || [];
-
-      // 1차 주행 결과 매핑
-      rawResults.forEach(item => {
-        if (item && Number(item.round_no) === 1) {
-          const tNum = item.team_number || item.number || item.team_id || item.id;
-          if (tNum) raceResults[tNum] = item;
-        }
-      });
-
-      // 팀 정보 목록 설정
-      if (rawTeams.length > 0) {
-        cachedTeams = rawTeams;
-      } else if (Object.keys(raceResults).length > 0) {
-        cachedTeams = Object.values(raceResults);
-      }
-    }
-
-    // 팀 번호 오름차순 정렬
-    cachedTeams.sort((a, b) => {
-      const numA = a.team_number || a.number || a.team_id || a.id || 0;
-      const numB = b.team_number || b.number || b.team_id || b.id || 0;
-      return numA - numB;
-    });
-
+  parkingStartPolling((data) => {
+    cachedTeams = data.teams || [];
     renderTeamResult();
   });
 </script>

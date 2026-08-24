@@ -1,0 +1,395 @@
+[
+    {
+        "team_no": 1,
+        "giveup": 0,
+        "team_name": "빅딜",
+        "school": "동국대학교",
+        "num_of_members": 5,
+        "members": [
+            {
+                "name": "김민찬",
+                "school": "동국대학교",
+                "department": "기계로봇에너지공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "정영민",
+                "school": "동국대학교",
+                "department": "기계로봇에너지공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "황종훈",
+                "school": "동국대학교",
+                "department": "기계로봇에너지공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "박준서",
+                "school": "동국대학교",
+                "department": "전자전기공학부",
+                "grade": "3학년"
+            },
+            {
+                "name": "배성우",
+                "school": "동국대학교",
+                "department": "기계로봇에너지공학과",
+                "grade": "1학년"
+            }
+        ]
+    },
+    {
+        "team_no": 2,
+        "giveup": 0,
+        "team_name": "KURiver",
+        "school": "국민대학교",
+        "num_of_members": 4,
+        "members": [
+            {
+                "name": "최윤성",
+                "school": "국민대학교",
+                "department": "인공지능학부",
+                "grade": "2학년"
+            },
+            {
+                "name": "이지유",
+                "school": "국민대학교",
+                "department": "소프트웨어학부",
+                "grade": "2학년"
+            },
+            {
+                "name": "이가은",
+                "school": "국민대학교",
+                "department": "인공지능학부",
+                "grade": "1학년"
+            },
+            {
+                "name": "최준수",
+                "school": "국민대학교",
+                "department": "인공지능학부",
+                "grade": "2학년"
+            }
+        ]
+    },
+    {
+        "team_no": 3,
+        "giveup": 0,
+        "team_name": "율붕붕",
+        "school": "성균관대학교",
+        "num_of_members": 5,
+        "members": [
+            {
+                "name": "김은솔",
+                "school": "성균관대학교",
+                "department": "기계공학과",
+                "grade": "2학년"
+            },
+            {
+                "name": "김태회",
+                "school": "성균관대학교",
+                "department": "기계공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "장혁",
+                "school": "성균관대학교",
+                "department": "기계공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "박정환",
+                "school": "성균관대학교",
+                "department": "기계공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "신준서",
+                "school": "성균관대학교",
+                "department": "기계공학과",
+                "grade": "3학년"
+            }
+        ]
+    },
+    {
+        "team_no": 4,
+        "giveup": 0,
+        "team_name": "TENSOR",
+        "school": "충북대학교",
+        "num_of_members": 5,
+        "members": [
+            {
+                "name": "신동준",
+                "school": "충북대학교",
+                "department": "지능로봇공학과",
+                "grade": "4학년"
+            },
+            {
+                "name": "최민성",
+                "school": "충북대학교",
+                "department": "지능로봇공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "이시온",
+                "school": "충북대학교",
+                "department": "지능로봇공학과",
+                "grade": "4학년"
+            },
+            {
+                "name": "김윤서",
+                "school": "충북대학교",
+                "department": "지능로봇공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "서민영",
+                "school": "충북대학교",
+                "department": "지능로봇공학과",
+                "grade": "3학년"
+            }
+        ]
+    },
+    {
+        "team_no": 5,
+        "giveup": 0,
+        "team_name": "E-ON",
+        "school": "경희대학교",
+        "num_of_members": 5,
+        "members": [
+            {
+                "name": "박주영",
+                "school": "경희대학교",
+                "department": "전자공학과",
+                "grade": "4학년"
+            },
+            {
+                "name": "서상이",
+                "school": "경희대학교",
+                "department": "전자공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "오지수",
+                "school": "경희대학교",
+                "department": "전자공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "유경민",
+                "school": "경희대학교",
+                "department": "전자공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "조연진",
+                "school": "경희대학교",
+                "department": "전자공학과",
+                "grade": "3학년"
+            }
+        ]
+    },
+    {
+        "team_no": 6,
+        "giveup": 0,
+        "team_name": "MECar",
+        "school": "연세대학교",
+        "num_of_members": 4,
+        "members": [
+            {
+                "name": "봉지환",
+                "school": "연세대학교",
+                "department": "기계공학부",
+                "grade": "3학년"
+            },
+            {
+                "name": "최도영",
+                "school": "연세대학교",
+                "department": "기계공학부",
+                "grade": "4학년"
+            },
+            {
+                "name": "장우진",
+                "school": "연세대학교",
+                "department": "디스플레이융합공학과",
+                "grade": "2학년"
+            },
+            {
+                "name": "임경언",
+                "school": "연세대학교",
+                "department": "기계공학부",
+                "grade": "3학년"
+            }
+        ]
+    },
+    {
+        "team_no": 7,
+        "giveup": 0,
+        "team_name": "팀 카이",
+        "school": "건국대학교",
+        "num_of_members": 5,
+        "members": [
+            {
+                "name": "황정헌",
+                "school": "건국대학교",
+                "department": "스마트운행체공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "주수빈",
+                "school": "건국대학교",
+                "department": "스마트운행체공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "김태윤",
+                "school": "건국대학교",
+                "department": "스마트운행체공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "고선우",
+                "school": "건국대학교",
+                "department": "전기전자공학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "황우진",
+                "school": "건국대학교",
+                "department": "컴퓨터공학부",
+                "grade": "3학년"
+            }
+        ]
+    },
+    {
+        "team_no": 8,
+        "giveup": 0,
+        "team_name": "비틀비틀",
+        "school": "경북대학교",
+        "num_of_members": 3,
+        "members": [
+            {
+                "name": "최민규",
+                "school": "경북대학교",
+                "department": "전자공학부",
+                "grade": "4학년"
+            },
+            {
+                "name": "성준",
+                "school": "경북대학교",
+                "department": "전자공학부",
+                "grade": "2학년"
+            },
+            {
+                "name": "박지민",
+                "school": "경북대학교",
+                "department": "전자공학부",
+                "grade": "3학년"
+            }
+        ]
+    },
+    {
+        "team_no": 9,
+        "giveup": 0,
+        "team_name": "아주숭한 INFO",
+        "school": "아주숭실한양대",
+        "num_of_members": 4,
+        "members": [
+            {
+                "name": "홍승미",
+                "school": "아주대학교",
+                "department": "소프트웨어학과",
+                "grade": "3학년"
+            },
+            {
+                "name": "김수민",
+                "school": "아주대학교",
+                "department": "소프트웨어학과",
+                "grade": "2학년"
+            },
+            {
+                "name": "문건우",
+                "school": "숭실대학교",
+                "department": "AI소프트웨어학부",
+                "grade": "1학년"
+            },
+            {
+                "name": "박민주",
+                "school": "한양대학교",
+                "department": "컴퓨터소프트웨어학부",
+                "grade": "3학년"
+            }
+        ]
+    },
+    {
+        "team_no": 10,
+        "giveup": 0,
+        "team_name": "ACCA",
+        "school": "숭실대학교",
+        "num_of_members": 4,
+        "members": [
+            {
+                "name": "주진주",
+                "school": "숭실대학교",
+                "department": "기계공학부",
+                "grade": "4학년"
+            },
+            {
+                "name": "강명진",
+                "school": "숭실대학교",
+                "department": "기계공학부",
+                "grade": "3학년"
+            },
+            {
+                "name": "장현빈",
+                "school": "숭실대학교",
+                "department": "기계공학부",
+                "grade": "4학년"
+            },
+            {
+                "name": "김예원",
+                "school": "숭실대학교",
+                "department": "기계공학부",
+                "grade": "2학년"
+            }
+        ]
+    },
+    {
+        "team_no": 11,
+        "giveup": 0,
+        "team_name": "KHUSLA",
+        "school": "경희대학교",
+        "num_of_members": 5,
+        "members": [
+            {
+                "name": "김대현",
+                "school": "경희대학교",
+                "department": "전자공학과",
+                "grade": "4학년"
+            },
+            {
+                "name": "정은택",
+                "school": "경희대학교",
+                "department": "전자공학과",
+                "grade": "4학년"
+            },
+            {
+                "name": "고수민",
+                "school": "경희대학교",
+                "department": "전자공학과",
+                "grade": "4학년"
+            },
+            {
+                "name": "박석환",
+                "school": "경희대학교",
+                "department": "전자공학과",
+                "grade": "4학년"
+            },
+            {
+                "name": "박준하",
+                "school": "경희대학교",
+                "department": "전자공학과",
+                "grade": "4학년"
+            }
+        ]
+    }
+]

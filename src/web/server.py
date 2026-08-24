@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, Optional
 from urllib.parse import urlparse
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+PARKING_CONFIG_PATH = STATIC_DIR.parent.parent / "config" / "parking_team_info.json"
 
 _CONTENT_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -40,7 +41,20 @@ class _BroadcastRequestHandler(BaseHTTPRequestHandler):
         if path == "/api/state":
             self._send_json(self.server.snapshot_provider())
             return
+        if path == "/api/parking-teams":
+            self._send_parking_teams()
+            return
         self._send_static(path)
+
+    def _send_parking_teams(self) -> None:
+        try:
+            teams = json.loads(PARKING_CONFIG_PATH.read_text(encoding="utf-8"))
+            if not isinstance(teams, list):
+                raise ValueError("parking team config must be a list")
+        except (OSError, ValueError, json.JSONDecodeError):
+            self.send_error(500, "Parking team config unavailable")
+            return
+        self._send_json(teams)
 
     def _send_json(self, payload: Dict[str, Any]) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")

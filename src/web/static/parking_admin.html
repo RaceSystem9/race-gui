@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>주차경기 채점 입력</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: #121a2b;
+    --panel-alt: #17233a;
+    --border: #2a3a58;
+    --text: #eef2f8;
+    --muted: #8fa0bf;
+    --accent: #3b82f6;
+    --green: #22c55e;
+    --red: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: "Pretendard Local", "Malgun Gothic", "Segoe UI", sans-serif;
+  }
+  nav.topnav {
+    display: flex; gap: 4px; padding: 10px 16px;
+    background: var(--panel); flex-wrap: wrap;
+  }
+  nav.topnav a {
+    color: var(--muted); text-decoration: none; padding: 8px 14px;
+    border-radius: 6px; font-size: 30px;
+  }
+  nav.topnav a:hover { background: var(--panel-alt); color: var(--text); }
+  nav.topnav a.active { background: var(--accent); color: #fff; }
+
+  h1 { font-size: 40px; padding: 4px 20px; margin: 14px 0; }
+
+  .layout {
+    display: flex; gap: 16px; padding: 0 20px 30px; align-items: flex-start;
+  }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px;
+  }
+
+  /* 좌측: 팀 목록 + 팀 추가 */
+  .team-panel { width: 340px; flex: 0 0 auto; }
+  .add-team-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .add-team-form input {
+    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 8px 10px; font-size: 28px;
+  }
+  .add-team-form button {
+    background: var(--accent); color: #fff; border: none; border-radius: 6px;
+    padding: 9px; font-size: 28px; font-weight: 700; cursor: pointer;
+  }
+
+  .team-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 560px; overflow-y: auto; }
+  .team-row {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+    background: var(--panel-alt); border: 1px solid var(--border); border-radius: 8px;
+    cursor: pointer;
+  }
+  .team-row.selected { border-color: var(--accent); background: #1c2a44; }
+  .team-row .order { color: var(--muted); font-size: 26px; width: 26px; }
+  .team-row .names { flex: 1; min-width: 0; }
+  .team-row .school { color: var(--muted); font-size: 24px; }
+  .team-row .team-name { font-size: 30px; font-weight: 700; }
+  .team-row .score-badge { font-weight: 700; font-size: 30px; }
+  .team-row .score-badge.neg { color: var(--red); }
+  .team-row .score-badge.pos { color: var(--green); }
+  .team-row .del-btn {
+    background: transparent; border: none; color: var(--muted); font-size: 32px;
+    cursor: pointer; padding: 2px 6px;
+  }
+  .team-row .del-btn:hover { color: var(--red); }
+
+  /* 우측: 채점 패널 */
+  .score-panel { flex: 1 1 auto; min-width: 480px; }
+  .score-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .score-header .title { font-size: 44px; font-weight: 800; }
+  .score-header .final-score { font-size: 68px; font-weight: 900; }
+  .score-header .final-score.neg { color: var(--red); }
+  .score-header .final-score.pos { color: var(--green); }
+
+  .item-row {
+    display: flex; align-items: center; gap: 12px; padding: 12px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-label { flex: 1 1 auto; font-size: 30px; }
+  .item-penalty { color: var(--muted); font-size: 26px; width: 90px; text-align: right; }
+
+  .counter { display: flex; align-items: center; gap: 8px; }
+  .counter button {
+    width: 34px; height: 34px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--panel-alt); color: var(--text); font-size: 36px; cursor: pointer;
+  }
+  .counter button:hover { background: #223454; }
+  .counter .count-val { width: 24px; text-align: center; font-size: 32px; font-weight: 700; }
+
+  .choice-group, .bool-group { display: flex; gap: 6px; }
+  .choice-btn, .bool-btn {
+    padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--panel-alt); color: var(--text); font-size: 26px; cursor: pointer;
+  }
+  .choice-btn.active, .bool-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .bool-btn.active.on-fail { background: var(--red); border-color: var(--red); }
+
+  .empty-hint { color: var(--muted); padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="/parking_admin.html" class="active">채점 입력</a>
+  <a href="/parking_teams.html">참가팀</a>
+  <a href="/parking_team-result.html">개별 결과</a>
+  <a href="/parking_leaderboard.html">순위표</a>
+</nav>
+
+<h1>번외 경기 - 주차경기 채점 입력 (제9회 국민대 대회 채점표 기준)</h1>
+
+<div class="layout">
+  <div class="panel team-panel">
+    <div class="add-team-form">
+      <input id="newSchool" type="text" placeholder="학교명" />
+      <input id="newTeamName" type="text" placeholder="팀명" />
+      <button onclick="addTeam()">+ 팀 추가</button>
+    </div>
+    <ul id="teamList" class="team-list"></ul>
+  </div>
+
+  <div class="panel score-panel" id="scorePanel">
+    <div class="empty-hint">왼쪽에서 팀을 선택하거나 새 팀을 추가하세요.</div>
+  </div>
+</div>
+
+<script src="/parking.js"></script>
+<script>
+  let selectedTeamId = null;
+
+  function addTeam() {
+    const schoolEl = document.getElementById("newSchool");
+    const nameEl = document.getElementById("newTeamName");
+    const school = schoolEl.value.trim();
+    const teamName = nameEl.value.trim();
+    if (!school && !teamName) return;
+
+    const data = parkingLoadData();
+    const nextId = data.teams.reduce((max, t) => Math.max(max, t.id), 0) + 1;
+    data.teams.push({ id: nextId, school, team_name: teamName });
+    parkingSaveData(data);
+
+    schoolEl.value = "";
+    nameEl.value = "";
+    selectedTeamId = nextId;
+    render();
+  }
+
+  function deleteTeam(id, ev) {
+    ev.stopPropagation();
+    if (!confirm("이 팀과 채점 기록을 삭제할까요?")) return;
+    const data = parkingLoadData();
+    data.teams = data.teams.filter((t) => t.id !== id);
+    delete data.scores[id];
+    parkingSaveData(data);
+    if (selectedTeamId === id) selectedTeamId = null;
+    render();
+  }
+
+  function selectTeam(id) {
+    selectedTeamId = id;
+    render();
+  }
+
+  function updateScore(teamId, key, value) {
+    const data = parkingLoadData();
+    if (!data.scores[teamId]) data.scores[teamId] = {};
+    data.scores[teamId][key] = value;
+    parkingSaveData(data);
+    render();
+  }
+
+  function changeCount(teamId, key, delta) {
+    const data = parkingLoadData();
+    const current = Number((data.scores[teamId] || {})[key]) || 0;
+    const next = Math.max(0, current + delta);
+    updateScore(teamId, key, next);
+  }
+
+  function renderTeamList(data) {
+    const ul = document.getElementById("teamList");
+    ul.innerHTML = "";
+    data.teams.forEach((team, idx) => {
+      const score = parkingFinalScore(data.scores[team.id] || {});
+      const li = document.createElement("li");
+      li.className = "team-row" + (team.id === selectedTeamId ? " selected" : "");
+      li.onclick = () => selectTeam(team.id);
+      li.innerHTML = `
+        <span class="order">${idx + 1}</span>
+        <span class="names">
+          <div class="school">${escapeHtmlLocal(team.school || "-")}</div>
+          <div class="team-name">${escapeHtmlLocal(team.team_name || "-")}</div>
+        </span>
+        <span class="score-badge ${score < 500 ? "neg" : "pos"}">${score}</span>
+        <button class="del-btn" title="삭제">✕</button>
+      `;
+      li.querySelector(".del-btn").onclick = (ev) => deleteTeam(team.id, ev);
+      ul.appendChild(li);
+    });
+  }
+
+  function renderScorePanel(data) {
+    const panel = document.getElementById("scorePanel");
+    const team = data.teams.find((t) => t.id === selectedTeamId);
+    if (!team) {
+      panel.innerHTML = `<div class="empty-hint">왼쪽에서 팀을 선택하거나 새 팀을 추가하세요.</div>`;
+      return;
+    }
+    const score = data.scores[team.id] || {};
+    const deduction = parkingCalcDeduction(score);
+    const final = PARKING_START_SCORE - deduction;
+
+    let itemsHtml = "";
+    for (const item of PARKING_ITEMS) {
+      let controlHtml = "";
+      if (item.type === "count") {
+        const val = Number(score[item.key]) || 0;
+        controlHtml = `
+          <div class="counter">
+            <button onclick="changeCount(${team.id}, '${item.key}', -1)">-</button>
+            <span class="count-val">${val}</span>
+            <button onclick="changeCount(${team.id}, '${item.key}', 1)">+</button>
+          </div>`;
+      } else if (item.type === "bool") {
+        const on = !!score[item.key];
+        controlHtml = `
+          <div class="bool-group">
+            <button class="bool-btn ${!on ? "active" : ""}" onclick="updateScore(${team.id}, '${item.key}', false)">해당없음</button>
+            <button class="bool-btn on-fail ${on ? "active" : ""}" onclick="updateScore(${team.id}, '${item.key}', true)">해당</button>
+          </div>`;
+      } else if (item.type === "choice") {
+        const val = Number(score[item.key]) || 0;
+        controlHtml = `<div class="choice-group">` +
+          item.choices.map((c) => `
+            <button class="choice-btn ${val === c.value ? "active" : ""}"
+              onclick="updateScore(${team.id}, '${item.key}', ${c.value})">${c.label}</button>
+          `).join("") +
+          `</div>`;
+      }
+
+      const penaltyLabel = item.type === "choice"
+        ? (item.key === "park_fail" ? "최대 -200점" : "최대 -20점")
+        : `-${item.penalty}점${item.type === "count" ? " / 회" : ""}`;
+
+      itemsHtml += `
+        <div class="item-row">
+          <span class="item-label">${item.label}</span>
+          <span class="item-penalty">${penaltyLabel}</span>
+          ${controlHtml}
+        </div>`;
+    }
+
+    panel.innerHTML = `
+      <div class="score-header">
+        <span class="title">${escapeHtmlLocal(team.school || "-")} / ${escapeHtmlLocal(team.team_name || "-")}</span>
+        <span class="final-score ${final < 500 ? "neg" : "pos"}">${final}점 <span style="font-size:28px;color:var(--muted);font-weight:400;">(500 - ${deduction})</span></span>
+      </div>
+      ${itemsHtml}
+    `;
+  }
+
+  function render() {
+    const data = parkingLoadData();
+    renderTeamList(data);
+    renderScorePanel(data);
+  }
+
+  function escapeHtmlLocal(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  }
+
+  parkingStartPolling(render);
+</script>
+</body>
+</html>

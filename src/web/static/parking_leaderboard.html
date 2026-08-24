@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>최종 경기 결과 - 레이스 방송 정보</title>
+<title>순위표 - 주차경기 (번외)</title>
 <link rel="stylesheet" href="/style.css" />
 <style>
   /* =========================================================
@@ -157,13 +157,11 @@
     <!-- 구분선 -->
     <div class="nav-divider"></div>
 
-    <!-- 5개 주요 페이지 바로가기 버튼 -->
-    <a href="/teams.html" class="nav-btn">주행 순서</a>
-    <a href="/team-result1.html" class="nav-btn">1차 주행내용</a>
-    <a href="/team-result2.html" class="nav-btn">2차 주행내용</a>
-    <a href="/leaderboard-round1.html" class="nav-btn">1차 순위표</a>
-    <a href="/leaderboard-round2.html" class="nav-btn">2차 순위표</a>
-    <a href="/leaderboard-final.html" class="nav-btn active">최종 순위표</a>
+    <!-- 번외 주차경기 페이지 바로가기 버튼 -->
+    <a href="/parking_teams.html" class="nav-btn">참가팀</a>
+    <a href="/parking_admin.html" class="nav-btn">채점 입력</a>
+    <a href="/parking_team-result.html" class="nav-btn">개별 결과</a>
+    <a href="/parking_leaderboard.html" class="nav-btn active">순위표</a>
   </div>
 
   <!-- 이미지 위 정밀 배치 테이블 -->
@@ -172,7 +170,7 @@
   </table>
 </div>
 
-<script src="/app.js"></script>
+<script src="/parking.js"></script>
 <script>
   let currentPage = 1;
   const pageSize = 8;
@@ -202,25 +200,15 @@
 
       // 참가팀 총 수인 20개를 초과하는 순위 칸은 '-'로 표시
       if (item && currentRank <= totalItems) {
-        const school = item.school || item.dept || "-";
-        const teamName = item.team_name || item.team || "-";
-        
-        let totalTime = "-";
-        if (item.giveup) {
-          totalTime = "포기";
-        } else if (item.disqualified) {
-          totalTime = "실격";
-        } else if (item.final_time !== null && item.final_time !== undefined) {
-          totalTime = formatSeconds(item.final_time, 2);
-        } else if (item.best_time !== null && item.best_time !== undefined) {
-          totalTime = formatSeconds(item.best_time, 2);
-        }
+        const school = item.team.school || "-";
+        const teamName = item.team.team_name || "-";
+        const totalScore = parkingFinalScore(item.score);
 
         html += `<tr style="color: ${rankColor};">
           <td class="col-rank">${currentRank}</td>
-          <td class="col-dept">${escapeHtml(school)}</td>
-          <td class="col-team">${escapeHtml(teamName)}</td>
-          <td class="col-time">${escapeHtml(totalTime)}</td>
+          <td class="col-dept">${parkingEscapeHtml(school)}</td>
+          <td class="col-team">${parkingEscapeHtml(teamName)}</td>
+          <td class="col-time">${totalScore}점</td>
         </tr>`;
       } else {
         // 데이터가 없거나 20위 초과 시 빈 줄 처리
@@ -244,42 +232,11 @@
     renderPage();
   }
 
-  startBroadcastPolling((data) => {
-    // 1. JSON 응답 객체에서 최종 리더보드 배열 추출
-    let rawList = [];
-    if (data.leaderboards && Array.isArray(data.leaderboards.FINAL)) {
-      rawList = data.leaderboards.FINAL;
-    } else if (Array.isArray(data.final_leaderboard)) {
-      rawList = data.final_leaderboard;
-    } else if (Array.isArray(data.leaderboard)) {
-      rawList = data.leaderboard;
-    } else if (Array.isArray(data)) {
-      rawList = data;
-    }
-
-    // 2. 유효한 팀 데이터만 필터링 (팀명이나 소속이 없거나 유효하지 않은 빈 객체 제거)
-    let list = rawList.filter(item => {
-      if (!item) return false;
-      const teamName = item.team_name || item.team;
-      const school = item.school || item.dept;
-      // 팀명과 소속이 모두 없거나 "-"인 더미 데이터 제외
-      return (teamName && teamName !== "-") || (school && school !== "-");
-    });
-
-    // 3. 기록 순 정렬 (완주팀 기록 오름차순 -> 실격/포기팀 하단 배치)
-    list.sort((a, b) => {
-      const aInvalid = a.giveup || a.disqualified;
-      const bInvalid = b.giveup || b.disqualified;
-      if (aInvalid && !bInvalid) return 1;
-      if (!aInvalid && bInvalid) return -1;
-      if (aInvalid && bInvalid) return 0;
-      
-      const timeA = a.final_time ?? a.best_time ?? 9999;
-      const timeB = b.final_time ?? b.best_time ?? 9999;
-      return timeA - timeB;
-    });
-
-    cachedLeaderboard = list;
+  parkingStartPolling((data) => {
+    cachedLeaderboard = (data.teams || []).map((team) => ({
+      team,
+      score: data.scores[team.id] || {},
+    })).sort((a, b) => parkingFinalScore(b.score) - parkingFinalScore(a.score));
     renderPage();
   });
   

@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>참가팀 - 레이스 방송 정보</title>
+<title>참가팀 - 주차경기 (번외)</title>
 <link rel="stylesheet" href="/style.css" />
 <style>
   /* =========================================================
@@ -152,13 +152,11 @@
     <!-- 구분선 -->
     <div class="nav-divider"></div>
 
-    <!-- 5개 주요 페이지 바로가기 버튼 -->
-    <a href="/teams.html" class="nav-btn active">주행 순서</a>
-    <a href="/team-result1.html" class="nav-btn">1차 주행내용</a>
-    <a href="/team-result2.html" class="nav-btn">2차 주행내용</a>
-    <a href="/leaderboard-round1.html" class="nav-btn">1차 순위표</a>
-    <a href="/leaderboard-round2.html" class="nav-btn">2차 순위표</a>
-    <a href="/leaderboard-final.html" class="nav-btn">최종 순위표</a>
+    <!-- 번외 주차경기 페이지 바로가기 버튼 -->
+    <a href="/parking_teams.html" class="nav-btn active">참가팀</a>
+    <a href="/parking_admin.html" class="nav-btn">채점 입력</a>
+    <a href="/parking_team-result.html" class="nav-btn">개별 결과</a>
+    <a href="/parking_leaderboard.html" class="nav-btn">순위표</a>
   </div>
 
   <!-- 이미지 위 정밀 배치 테이블 -->
@@ -167,11 +165,18 @@
   </table>
 </div>
 
-<script src="/app.js"></script>
+<script src="/parking.js"></script>
 <script>
   let currentPage = 1;
   const pageSize = 8;
   let cachedTeams = [];
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  }
 
   function renderPage() {
     const tbody = document.getElementById("rows");
@@ -189,7 +194,7 @@
       const team = pageTeams[i];
       if (team) {
         html += `<tr>
-          <td class="col-order">${team.number}</td>
+          <td class="col-order">${startIdx + i + 1}</td>
           <td class="col-dept">${escapeHtml(team.school)}</td>
           <td class="col-team">${escapeHtml(team.team_name)}</td>
         </tr>`;
@@ -214,7 +219,7 @@
     renderPage();
   }
 
-  startBroadcastPolling((data) => {
+  parkingStartPolling((data) => {
     cachedTeams = data.teams || [];
     renderPage();
   });
