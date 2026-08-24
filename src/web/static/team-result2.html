@@ -151,6 +151,11 @@
     transform: translateX(30px);
   }
 
+  .mission-penalty-label {
+    color: #ff69b4;
+    font-size: 24px;
+  }
+
   /* 맨 아래 최종합계시간 */
   .result-table tr.total-row td {
     font-family: "Pretendard", "Pretendard Local", sans-serif;
@@ -219,6 +224,10 @@
           <td id="m5" class="col-score">-</td>
         </tr>
         <tr>
+          <td class="col-mission">미션 합산 벌초</td>
+          <td id="mSum" class="col-score">-</td>
+        </tr>
+        <tr>
           <td class="col-mission">주행 시간</td>
           <td id="mTime" class="col-score">-</td>
         </tr>
@@ -245,11 +254,18 @@
     "lblMIssionScore4",
     "lblMIssionScore5"
   ];
+  const MISSION_PENALTY_SECONDS = [10, 3, 5, 10, 10];
+
+  function formatMissionScore(val, penaltySeconds) {
+    const num = Number(val);
+    const score = Number.isFinite(num) ? Math.trunc(num) : 0;
+    return `${score}&nbsp;&nbsp;&nbsp;<span class="mission-penalty-label">x ${penaltySeconds}초</span>`;
+  }
 
   function formatTimeValue(val) {
-    if (val === undefined || val === null) return "0.000";
+    if (val === undefined || val === null) return "0.00";
     const num = Number(val);
-    return isNaN(num) ? "0.000" : num.toFixed(3);
+    return Number.isFinite(num) ? num.toFixed(2) : "0.00";
   }
 
   function renderTeamResult() {
@@ -282,18 +298,24 @@
     const res = raceResults[teamId] || currentTeam.result || currentTeam || {};
     const scores = res.mission_scores || res.scores || {};
 
+    let missionPenaltySeconds = 0;
+
     // 1~5번 미션 점수 매핑
     MISSION_KEYS.forEach((key, idx) => {
       const el = document.getElementById(`m${idx + 1}`);
+      const score = Number(scores[key] ?? res[key]);
+      const missionScore = Number.isFinite(score) ? Math.trunc(score) : 0;
+      missionPenaltySeconds += missionScore * MISSION_PENALTY_SECONDS[idx];
       if (el) {
-        const val = scores[key] ?? res[key];
-        el.textContent = formatTimeValue(val);
+        el.innerHTML = formatMissionScore(missionScore, MISSION_PENALTY_SECONDS[idx]);
       }
     });
 
+    document.getElementById("mSum").textContent = formatTimeValue(missionPenaltySeconds);
+
     // 주행 시간 및 최종 시간
     document.getElementById("mTime").textContent = formatTimeValue(res.elapsed_time);
-    document.getElementById("mTotal").textContent = formatTimeValue(res.final_time);
+    document.getElementById("mTotal").textContent = res.disqualified ? "실격" : formatTimeValue(res.final_time);
 
     // 컨트롤 바 상태 업데이트 (버튼은 항시 활성화 유지)
     document.getElementById("pageIndicator").innerText = `팀 ${currentTeamIndex + 1} / ${totalTeams}`;

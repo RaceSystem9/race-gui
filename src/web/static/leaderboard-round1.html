@@ -207,7 +207,7 @@
         
         let totalTime = "-";
         if (item.disqualified) {
-          totalTime = "-";
+          totalTime = "실격";
         } else if (item.final_time !== null && item.final_time !== undefined) {
           totalTime = formatSeconds(item.final_time, 2);
         } else if (item.round1_time) {

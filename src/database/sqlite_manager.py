@@ -270,6 +270,30 @@ class SQLiteManager:
             return None
         return self._row_to_result_dict(row)
 
+    def get_race_results(self) -> List[Dict[str, Any]]:
+        rows = self.connection.execute(
+            """
+            WITH latest AS (
+                SELECT rr.*
+                FROM race_results rr
+                JOIN (
+                    SELECT team_number, round_no, MAX(id) AS max_id
+                    FROM race_results
+                    GROUP BY team_number, round_no
+                ) grouped
+                ON rr.team_number = grouped.team_number
+                AND rr.round_no = grouped.round_no
+                AND rr.id = grouped.max_id
+            )
+            SELECT id, created_at, round_no, team_number, team_name, school, elapsed_time,
+                   mission_penalty_seconds, manual_penalty_points, final_time,
+                   disqualified, mission_scores_json, lap1_time, lap2_time, lap3_time
+            FROM latest
+            ORDER BY round_no ASC, team_number ASC
+            """
+        ).fetchall()
+        return [self._row_to_result_dict(row) for row in rows]
+
     def get_leaderboard(self, limit: int = 22, round_no: Optional[int] = None) -> List[Dict[str, Any]]:
         if round_no is None:
             rows = self.connection.execute(
@@ -484,8 +508,8 @@ class SQLiteManager:
             "team_number": int(row["team_number"]),
             "team_name": str(row["team_name"]),
             "school": str(row["school"]),
-            "elapsed_time": float(row["elapsed_time"]),
-            "mission_penalty_seconds": float(row["mission_penalty_seconds"]),
+            "elapsed_time": float(row["elapsed_time"]) if row["elapsed_time"] is not None else 0.0,
+            "mission_penalty_seconds": float(row["mission_penalty_seconds"]) if row["mission_penalty_seconds"] is not None else 0.0,
             "manual_penalty_points": int(row["manual_penalty_points"]),
             "final_time": None if final_time is None else float(final_time),
             "disqualified": bool(row["disqualified"]),

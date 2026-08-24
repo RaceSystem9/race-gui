@@ -626,6 +626,7 @@ class RaceController(QObject):
                 "FINAL": self.get_ranking_board_rows(max_rows=22, view_mode=self.VIEW_MODE_FINAL),
             }
             progress_map = self.get_team_progress_map()
+            race_results = self.database.get_race_results()
 
         state = self.state
         current = state.current_team or {}
@@ -674,6 +675,7 @@ class RaceController(QObject):
             },
             "team_progress": {str(team_no): info for team_no, info in progress_map.items()},
             "teams": teams,
+            "race_results": race_results,
         }
 
     def set_view_mode(self, view_mode: str) -> None:
@@ -815,9 +817,10 @@ class RaceController(QObject):
         if self._run_finalized and not force_update:
             return
 
-        race_elapsed = self.state.official_elapsed_time
-        if race_elapsed is None:
-            race_elapsed = self.state.elapsed_time
+        race_elapsed = max(
+            float(self.state.elapsed_time or 0.0),
+            float(self.state.official_elapsed_time or 0.0),
+        )
 
         # A 0.00s "finish" only happens when Stop is pressed without an actual run
         # (e.g. right after Reset). Treat it as a full reset for this team/round:

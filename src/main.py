@@ -12,6 +12,8 @@ from .gui.broadcast_window import BroadcastWindow
 from .gui.main_window import MainWindow
 from .web.server import BroadcastWebServer
 
+SHOW_BROADCAST_WINDOW = False
+
 
 def build_app(
     headless: bool = False,
@@ -54,7 +56,8 @@ def build_app(
             broadcast_window.resize(1600, 1000)
 
         operator_window.show()
-        broadcast_window.show()
+        if SHOW_BROADCAST_WINDOW:
+            broadcast_window.show()
 
     return app, operator_window, broadcast_window, controller, db_manager
 
