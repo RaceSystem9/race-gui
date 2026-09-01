@@ -291,7 +291,7 @@
         "team_no": 9,
         "giveup": 0,
         "team_name": "아주숭한 INFO",
-        "school": "아주숭실한양대",
+        "school": "아주,숭실,한양대",
         "num_of_members": 4,
         "members": [
             {
@@ -356,39 +356,39 @@
     {
         "team_no": 11,
         "giveup": 0,
-        "team_name": "KHUSLA",
+        "team_name": "돌쇠3군",
         "school": "경희대학교",
         "num_of_members": 5,
         "members": [
             {
-                "name": "김대현",
+                "name": "엄이레",
                 "school": "경희대학교",
                 "department": "전자공학과",
-                "grade": "4학년"
+                "grade": "3학년"
             },
             {
-                "name": "정은택",
+                "name": "김중혁",
                 "school": "경희대학교",
                 "department": "전자공학과",
-                "grade": "4학년"
+                "grade": "3학년"
             },
             {
-                "name": "고수민",
+                "name": "송명훈",
                 "school": "경희대학교",
                 "department": "전자공학과",
-                "grade": "4학년"
+                "grade": "3학년"
             },
             {
-                "name": "박석환",
+                "name": "배시연",
                 "school": "경희대학교",
                 "department": "전자공학과",
-                "grade": "4학년"
+                "grade": "2학년"
             },
             {
-                "name": "박준하",
+                "name": "강연우",
                 "school": "경희대학교",
                 "department": "전자공학과",
-                "grade": "4학년"
+                "grade": "2학년"
             }
         ]
     }

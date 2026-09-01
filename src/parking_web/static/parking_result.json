@@ -1,0 +1,112 @@
+{
+  "teams": [
+    {
+      "id": 1,
+      "school": "동국대학교",
+      "team_name": "빅딜"
+    },
+    {
+      "id": 2,
+      "school": "국민대학교",
+      "team_name": "KURiver"
+    },
+    {
+      "id": 3,
+      "school": "성균관대학교",
+      "team_name": "율붕붕"
+    },
+    {
+      "id": 4,
+      "school": "충북대학교",
+      "team_name": "TENSOR"
+    },
+    {
+      "id": 5,
+      "school": "경희대학교",
+      "team_name": "E-ON"
+    },
+    {
+      "id": 6,
+      "school": "연세대학교",
+      "team_name": "MECar"
+    },
+    {
+      "id": 7,
+      "school": "건국대학교",
+      "team_name": "팀 카이"
+    },
+    {
+      "id": 8,
+      "school": "경북대학교",
+      "team_name": "비틀비틀"
+    },
+    {
+      "id": 9,
+      "school": "아주,숭실,한양대",
+      "team_name": "아주숭한 INFO"
+    },
+    {
+      "id": 10,
+      "school": "숭실대학교",
+      "team_name": "ACCA"
+    },
+    {
+      "id": 11,
+      "school": "경희대학교",
+      "team_name": "돌쇠3군"
+    }
+  ],
+  "scores": {
+    "1": {
+      "cone_touch": 1,
+      "wall_touch": 2,
+      "park_fail": 2
+    },
+    "2": {
+      "wall_touch": 0,
+      "disqualified": true
+    },
+    "3": {
+      "protrude": 2,
+      "park_fail": 1
+    },
+    "4": {
+      "wall_touch": 1,
+      "cone_move": 1,
+      "protrude": 2
+    },
+    "5": {
+      "protrude": 2
+    },
+    "6": {
+      "park_fail": 2
+    },
+    "7": {
+      "start_fail": true
+    },
+    "8": {
+      "cone_touch": 1
+    },
+    "9": {
+      "park_fail": 2
+    },
+    "10": {
+      "protrude": 2
+    },
+    "Alpha": 10,
+    "Bravo": 20
+  },
+  "final_scores": {
+    "1": 230,
+    "2": -500,
+    "3": 380,
+    "4": 430,
+    "5": 480,
+    "6": 300,
+    "7": 480,
+    "8": 490,
+    "9": 300,
+    "10": 480,
+    "11": 500
+  }
+}

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>참가팀 - 주차경기 (번외)</title>
+<link rel="stylesheet" href="/style.css" />
+<style>
+  /* =========================================================
+     좌상단 앵커 고정 & 반응형 크기 변형 금지 (No-Scale Fixed Layout)
+     ========================================================= */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: auto !important; /* 창 축소 시 상하/좌우 스크롤바 생성 */
+    background-color: #00FF00 !important;
+  }
+
+  /* 1920x1080 고정 컨테이너 (좌측으로 200px, 상단 -50px 이동) */
+  .fixed-viewport {
+    position: absolute;
+    top: -50px;
+    left: -200px;
+    width: 1920px;
+    height: 1080px;
+    min-width: 1920px;
+    min-height: 1080px;
+    background-image: url('plates/order.png');
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    background-size: 1920px 1080px;
+  }
+
+  /* 상단 페이징 & 네비게이션 버튼 통합 컨트롤 바 */
+  .page-control-bar {
+    position: absolute;
+    top: 70px;
+    left: 210px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .page-btn, .nav-btn {
+    background: #3b82f6;
+    color: #ffffff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .nav-btn {
+    background: #10b981; /* 네비게이션 버튼 색상 (녹색) */
+  }
+
+  .nav-btn:hover {
+    background: #059669;
+  }
+
+  .nav-btn.active {
+    background: #f59e0b; /* 현재 페이지 강조 (주황색) */
+  }
+
+  .page-btn:disabled {
+    background: #4b5563;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .page-indicator {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    margin-right: 10px;
+  }
+
+  .nav-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.3);
+    margin: 0 4px;
+  }
+
+  /* order.png 플레이트 내 테이블 위치 고정 */
+  .plate-order-table {
+    position: absolute;
+    top: 337px;
+    left: 410px;
+    width: 1100px;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .plate-order-table tr {
+    height: 68.5px;
+  }
+
+  .plate-order-table td {
+    color: #ffffff !important;
+    font-family: "Pretendard Local", "Gmarket Sans", sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 컬럼별 너비 및 좌우 미세 위치 이동 */
+  .plate-order-table td.col-order { 
+    width: 220px; 
+    text-align: center;
+    transform: translateX(30px); /* 음수(-): 왼쪽으로 이동 / 양수(+): 오른쪽으로 이동 */
+  }
+
+  .plate-order-table td.col-dept { 
+    width: 440px; 
+    text-align: center;
+    transform: translateX(45px);  /* 오른쪽으로 15px 이동 */
+  }
+
+  .plate-order-table td.col-team { 
+    width: 440px; 
+    text-align: center;
+    transform: translateX(-20px);  /* 오른쪽으로 20px 이동 */
+  }
+
+</style>
+</head>
+<body class="broadcast-page">
+
+<div class="fixed-viewport">
+  <!-- 상단 컨트롤 바 (페이징 + 주요 페이지 5개 바로가기) -->
+  <div class="page-control-bar">
+    <!-- 페이징 컨트롤 (버튼 비활성화 없음 및 무한 순환) -->
+    <button id="prevBtn" class="page-btn" onclick="changePage(-1)">이전 페이지</button>
+    <span id="pageIndicator" class="page-indicator">1 / 3 페이지</span>
+    <button id="nextBtn" class="page-btn" onclick="changePage(1)">다음 페이지</button>
+
+    <!-- 구분선 -->
+    <div class="nav-divider"></div>
+
+    <!-- 번외 주차경기 페이지 바로가기 버튼 -->
+    <a href="/parking_teams.html" class="nav-btn active">참가팀</a>
+    <a href="/parking_admin.html" class="nav-btn">채점 입력</a>
+    <a href="/parking_team-result.html" class="nav-btn">개별 결과</a>
+    <a href="/parking_leaderboard.html" class="nav-btn">순위표</a>
+  </div>
+
+  <!-- 이미지 위 정밀 배치 테이블 -->
+  <table class="plate-order-table">
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<script src="/parking.js"></script>
+<script>
+  let currentPage = 1;
+  const pageSize = 8;
+  let cachedTeams = [];
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  }
+
+  function renderPage() {
+    const tbody = document.getElementById("rows");
+    const totalPages = Math.ceil(Math.max(cachedTeams.length, 1) / pageSize) || 1;
+    
+    // 페이지 범위 순환 보정 (첫 페이지에서 이전 누르면 마지막 페이지로, 반대도 동일)
+    currentPage = ((currentPage - 1) % totalPages + totalPages) % totalPages + 1;
+
+    const startIdx = (currentPage - 1) * pageSize;
+    const pageTeams = cachedTeams.slice(startIdx, startIdx + pageSize);
+
+    // 테이블 8개 행 고정 렌더링
+    let html = "";
+    for (let i = 0; i < pageSize; i++) {
+      const team = pageTeams[i];
+      if (team) {
+        html += `<tr>
+          <td class="col-order">${startIdx + i + 1}</td>
+          <td class="col-dept">${escapeHtml(team.school)}</td>
+          <td class="col-team">${escapeHtml(team.team_name)}</td>
+        </tr>`;
+      } else {
+        html += `<tr>
+          <td class="col-order">-</td>
+          <td class="col-dept">-</td>
+          <td class="col-team">-</td>
+        </tr>`;
+      }
+    }
+    tbody.innerHTML = html;
+
+    // 페이징 인디케이터 업데이트 및 버튼 항시 활성화
+    document.getElementById("pageIndicator").innerText = `${currentPage} / ${totalPages} 페이지`;
+    document.getElementById("prevBtn").disabled = false;
+    document.getElementById("nextBtn").disabled = false;
+  }
+
+  function changePage(direction) {
+    currentPage += direction;
+    renderPage();
+  }
+
+  parkingStartPolling((data) => {
+    cachedTeams = data.teams || [];
+    renderPage();
+  });
+</script>
+</body>
+</html>

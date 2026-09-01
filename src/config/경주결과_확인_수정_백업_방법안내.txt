@@ -1,23 +1,20 @@
 ===================
-주행 데이터 저장 위치
+주행/주차 데이터 저장 위치
 C:\Users\xytron\Desktop\RaceManager\race-gui\src\config
 
 ===================
-팀 정보를 담은 json 제작하기
+(1) 주행경기 팀 정보를 담은 json 제작하기
 
 team_info.xlsx - 팀 정보가 들어 있는 엑셀 (수작업으로 제작함)
 make_json_from_team_info_xlsx.py - 위 엑셀파일로 json 파일 제작할 때 사용
-  이 파이썬 그냥 실행하면 알아서 team_info.xlsx 읽어서 team_info.json 생성함.
+이 파이썬 실행하면 알아서 team_info.xlsx 읽어서 team_info.json 생성함.
   
 경기 결과는 
 race_control.db 파일과 race_results.json 파일에 저장됩니다. 
 
 앱의 순위/조회 로직은 race_control.db 를 사용합니다.
-
 race_results.json 은 같이 기록되는 보조파일 성격입니다.
-
 그래서 불일치가 생기면
-
 화면 표시와 순위는 DB 기준으로 보입니다.
 
 JSON을 손으로 바꿔도 DB를 안 바꾸면 화면에는 반영되지 않을 수 있습니다.
@@ -27,13 +24,40 @@ JSON을 손으로 바꿔도 DB를 안 바꾸면 화면에는 반영되지 않을
 ==================
 * DB를 기준으로 
 race_results.json을 재생성하는 단방향 동기화 스크립트 제공합니다.
-
 스크립트 파일 : sync_race_results_json.py
-
   - race_control.db의 race_results 테이블을 읽음
   - race_results.json을 DB 내용으로 재생성
-  
 기존 JSON이 있으면 기본적으로 백업 파일 생성 후 덮어씀
-
 실행 방법
   $ python sync_race_results_json.py
+===================
+
+===================
+(2) 주차 대회 정보를 담은 json 제작하기
+
+parking_team_info.xlsx - 팀 정보가 들어 있는 엑셀 (수작업으로 제작함)
+make_json_from_parking_team_info_xlsx.py - 위 엑셀파일로 json 파일 제작할 때 사용
+이 파이썬 실행하면 알아서 parking_team_info.xlsx 읽어서 parking_team_info.json 생성함.
+  
+경기 결과는 
+parking_control.db 파일과 parking_results.json 파일에 저장됩니다. 
+
+앱의 순위/조회 로직은 parking_control.db 를 사용합니다.
+parking_results.json 은 같이 기록되는 보조파일 성격입니다.
+그래서 불일치가 생기면
+화면 표시와 순위는 DB 기준으로 보입니다.
+
+JSON을 손으로 바꿔도 DB를 안 바꾸면 화면에는 반영되지 않을 수 있습니다.
+이후 앱에서 같은 팀/같은 차수를 다시 저장하면, 
+그 항목은 JSON이 다시 덮어써져서 일부만 맞고 일부는 계속 어긋날 수 있습니다.
+
+==================
+* DB를 기준으로 
+parking_results.json을 재생성하는 단방향 동기화 스크립트 제공합니다.
+스크립트 파일 : sync_parking_results_json.py
+  - parking_control.db의 parking_results 테이블을 읽음
+  - parking_results.json을 DB 내용으로 재생성
+기존 JSON이 있으면 기본적으로 백업 파일 생성 후 덮어씀
+실행 방법
+  $ python sync_parking_results_json.py
+===================

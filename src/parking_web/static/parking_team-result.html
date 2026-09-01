@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>개별 결과 - 주차경기 (번외)</title>
+<link rel="stylesheet" href="/style.css" />
+<style>
+  /* =========================================================
+     좌상단 앵커 고정 & 반응형 크기 변형 금지 (No-Scale Fixed Layout)
+     ========================================================= */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: auto !important;
+    background-color: #00FF00 !important;
+  }
+
+  /* 1920x1080 고정 컨테이너 (parking_team-result.png 적용) */
+  .fixed-viewport {
+    position: absolute;
+    top: -50px;
+    left: -200px;
+    width: 1920px;
+    height: 1080px;
+    min-width: 1920px;
+    min-height: 1080px;
+    background-image: url('plates/parking_team-result.png');
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    background-size: 1920px 1080px;
+  }
+
+  /* 상단 페이징 & 네비게이션 버튼 통합 컨트롤 바 */
+  .page-control-bar {
+    position: absolute;
+    top: 70px;
+    left: 210px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .page-btn, .nav-btn {
+    background: #3b82f6;
+    color: #ffffff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .nav-btn {
+    background: #10b981;
+  }
+
+  .nav-btn:hover {
+    background: #059669;
+  }
+
+  /* 활성화된 버튼 (주황색) */
+  .nav-btn.active {
+    background: #f59e0b;
+  }
+
+  .page-btn:disabled {
+    background: #4b5563;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .page-indicator {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    margin-right: 10px;
+  }
+
+  .nav-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.3);
+    margin: 0 4px;
+  }
+
+  /* 주행결과 컨테이너 및 헤더 */
+  .result-display-container {
+    position: absolute;
+    top: 235px;
+    left: 410px;
+    width: 1100px;
+  }
+
+  /* 상단 팀명 줄 */
+  .result-header-title {
+    text-align: center;
+    font-family: "Gmarket Sans", sans-serif;
+    font-weight: 700;
+    font-size: 44px;
+    color: #ffffff;
+    margin-bottom: 60px;
+    transform: translateY(-5px);
+  }
+
+  /* 주행결과 표 (구분선 제거) */
+  .result-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .result-table tr {
+    height: 61px;
+  }
+
+  /* 기본 셀 스타일 */
+  .result-table td {
+    font-family: "Pretendard", "Pretendard Local", sans-serif;
+    font-weight: 300;
+    font-size: 28px;
+    color: #ffffff;
+    border: none !important;
+    padding: 0;
+    vertical-align: middle;
+  }
+
+  /* =========================================================
+     [위치 조정 영역] transform: translateX() 속성으로 위치 조절
+     ========================================================= */
+  
+  /* 1. 미션 항목 열 위치 조정 */
+  .result-table td.col-mission {
+    width: 50%;
+    text-align: center;
+    transform: translateX(-10px);
+  }
+
+  /* 2. 벌초 점수 열 위치 조정 */
+  .result-table td.col-score {
+    width: 50%;
+    text-align: center;
+    transform: translateX(30px);
+  }
+
+  .mission-penalty-label {
+    color: #ff69b4;
+    font-size: 24px;
+  }
+
+  /* 맨 아래 최종합계시간 */
+  .result-table tr.total-row td {
+    font-family: "Pretendard", "Pretendard Local", sans-serif;
+    font-weight: 900;
+    font-size: 32px;
+    color: #ff9900;
+    transform: translateY(-10px); 
+  }
+
+  /* 3. 최종합계시간 위치 (좌우 & 상하 통합 조정) */
+  .result-table tr.total-row td.col-mission {
+    transform: translate(-10px, -5px);
+  }
+  .result-table tr.total-row td.col-score {
+    transform: translate(20px, -5px);
+  }
+  
+</style>
+</head>
+<body class="broadcast-page">
+
+<div class="fixed-viewport">
+  <!-- 상단 컨트롤 바 (팀 페이징 + 주요 페이지 5개 바로가기) -->
+  <div class="page-control-bar">
+    <!-- 팀 전환 컨트롤 (버튼 비활성화 없음) -->
+    <button id="prevBtn" class="page-btn" onclick="changeTeam(-1)">이전팀</button>
+    <span id="pageIndicator" class="page-indicator">팀 1 / 1</span>
+    <button id="nextBtn" class="page-btn" onclick="changeTeam(1)">다음팀</button>
+
+    <!-- 구분선 -->
+    <div class="nav-divider"></div>
+
+    <!-- 번외 주차경기 페이지 바로가기 버튼 -->
+    <a href="/parking_teams.html" class="nav-btn">참가팀</a>
+    <a href="/parking_admin.html" class="nav-btn">채점 입력</a>
+    <a href="/parking_team-result.html" class="nav-btn active">개별 결과</a>
+    <a href="/parking_leaderboard.html" class="nav-btn">순위표</a>
+  </div>
+
+  <!-- 이미지 위 팀 채점결과 표시 영역 -->
+  <div class="result-display-container">
+    <div id="headerTitle" class="result-header-title">- - 주차경기 채점 결과</div>
+
+    <table class="result-table">
+      <tbody>
+        <tr>
+          <td class="col-mission">라바콘 살짝 접촉</td>
+          <td id="p1" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">라바콘 전복/이동</td>
+          <td id="p2" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">칸막이 접촉</td>
+          <td id="p3" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">칸막이 이동</td>
+          <td id="p4" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">주차 사각형 돌출</td>
+          <td id="p5" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">주차 실패</td>
+          <td id="p6" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">처음 위치 정차 실패</td>
+          <td id="p7" class="col-score">-</td>
+        </tr>
+        <tr>
+          <td class="col-mission">제한시간 초과</td>
+          <td id="p8" class="col-score">-</td>
+        </tr>
+        <tr class="total-row">
+          <td class="col-mission">최종 점수 (500점 - 감점)</td>
+          <td id="pFinal" class="col-score">-</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="/parking.js"></script>
+<script>
+  let currentTeamIndex = 0;
+  let cachedTeams = [];
+
+  function renderTeamResult() {
+    const totalTeams = cachedTeams.length;
+    if (totalTeams === 0) {
+      document.getElementById("headerTitle").textContent = "- - 주차경기 채점 결과";
+      document.getElementById("pageIndicator").innerText = "팀 0 / 0";
+      for (let index = 1; index <= 8; index++) {
+        document.getElementById(`p${index}`).textContent = "-";
+      }
+      document.getElementById("pFinal").textContent = "-";
+      return;
+    }
+
+    currentTeamIndex = ((currentTeamIndex % totalTeams) + totalTeams) % totalTeams;
+    const currentTeam = cachedTeams[currentTeamIndex];
+    const score = parkingLoadData().scores[currentTeam.id] || {};
+    const protrudeChoice = PARKING_ITEMS[4].choices.find(
+      (choice) => choice.value === Number(score.protrude || 0)
+    );
+    const values = [
+      `${Number(score.cone_touch) || 0}회`,
+      `${Number(score.cone_move) || 0}회`,
+      `${Number(score.wall_touch) || 0}회`,
+      `${Number(score.wall_move) || 0}회`,
+      protrudeChoice ? protrudeChoice.label : "없음",
+      PARKING_ITEMS[5].choices.find(
+        (choice) => choice.value === Number(score.park_fail || 0)
+      )?.label || "없음",
+      score.start_fail ? "해당" : "해당없음",
+      score.time_over ? "해당" : "해당없음",
+    ];
+    document.getElementById("headerTitle").textContent = `${currentTeam.school || "-"} / ${currentTeam.team_name || "-"} - 주차경기 채점 결과`;
+    values.forEach((value, index) => {
+      document.getElementById(`p${index + 1}`).textContent = value;
+    });
+    document.getElementById("pFinal").textContent = `${parkingFinalScore(score)}점`;
+    document.getElementById("pageIndicator").innerText = `팀 ${currentTeamIndex + 1} / ${totalTeams}`;
+    document.getElementById("prevBtn").disabled = false;
+    document.getElementById("nextBtn").disabled = false;
+  }
+
+  function changeTeam(direction) {
+    currentTeamIndex += direction;
+    renderTeamResult();
+  }
+
+  parkingStartPolling((data) => {
+    cachedTeams = data.teams || [];
+    renderTeamResult();
+  });
+</script>
+</body>
+</html>
