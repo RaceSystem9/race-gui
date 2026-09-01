@@ -29,6 +29,10 @@ def build_app(
     team_config_path = config_dir / "team_info.json"
     if not team_config_path.exists():
         team_config_path = config_dir / "teams.json"
+    if not team_config_path.exists():
+        dated_configs = sorted(config_dir.glob("*_team_info.json"))
+        if dated_configs:
+            team_config_path = dated_configs[-1]
 
     db_manager = SQLiteManager(config_dir / "race_control.db")
     controller = RaceController(
